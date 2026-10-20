@@ -12,7 +12,7 @@ export type CreateServiceState = {
   success: boolean;
   message: string;
 };
-
+    
 export async function createService(
   _: CreateServiceState,
   formData: FormData,
@@ -65,7 +65,6 @@ export async function createService(
       .select("id")
       .eq("phone", data.phone)
       .maybeSingle();
-
     if (existingError) {
       console.error(
         "CLIENT LOOKUP FAILED:",

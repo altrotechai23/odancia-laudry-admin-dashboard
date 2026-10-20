@@ -1,23 +1,30 @@
+import Image from "next/image";
 import Link from "next/link";
 
 export default function Home() {
   return (
-    <main className="flex min-h-screen items-center justify-center px-6">
+    <main className="relative flex min-h-screen items-center justify-center px-6">
+      <div className="inset-0 absolute -z-10">
+
+      </div>
       <div className="w-full max-w-xl rounded-3xl border border-black/10 bg-white p-10 shadow-[0_20px_80px_rgba(0,0,0,0.08)]">
         <div className="mb-8">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-black text-lg font-semibold text-white">
-            O
-          </div>
+          <div className="relative mx-auto mb-5 flex  items-center bg-white justify-center rounded-2xl">
+                      <Image
+                        src="/logo.png"
+                        alt="Odancia Laundry Logo"
+                        width={364}
+                        height={164}
+                        className="h-full w-full object-contain"
+                        priority
+                      />
+                    </div>
 
-          <p className="mb-2 text-sm font-medium uppercase tracking-[0.2em] text-neutral-500">
-            Odancia Laundry
-          </p>
-
-          <h1 className="text-4xl font-semibold tracking-tight">
-            Laundry OS
+          <h1 className="text-4xl text-blue-400 font-semibold tracking-tight">
+            Laundry 
           </h1>
 
-          <p className="mt-4 leading-7 text-neutral-500">
+          <p className="mt-4 leading-7 text-blue-950">
             A modern operating system for managing laundry
             services, clients, payments and daily operations.
           </p>
@@ -26,7 +33,7 @@ export default function Home() {
         <div className="flex flex-col gap-3 sm:flex-row">
           <Link
             href="/login"
-            className="inline-flex h-12 items-center justify-center rounded-xl bg-black px-6 text-sm font-medium text-white transition hover:bg-neutral-800"
+            className="inline-flex h-12 items-center justify-center rounded-xl bg-blue-800 px-6 text-sm font-medium text-white transition hover:bg-red-00"
           >
             Staff Login
           </Link>

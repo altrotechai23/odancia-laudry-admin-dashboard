@@ -1,0 +1,7 @@
+************** TODO LIST _________
+1 Clock-in system
+2 Whatsapp for notifications
+3 Fix the payment system
+------------------------
+
+4 Email and Whatsapp Automation Scheduling M
