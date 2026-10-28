@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import ServiceActions from "./ServiceActions";
 import ServicePayment from "./ServicePayment";
+import CollectionScheduleEditor from "./CollectionScheduleEditor";
 import {
   requireUser,
 } from "@/lib/auth/get-current-user";
@@ -471,6 +472,12 @@ export default async function ServiceDetailsPage({
                   </div>
 
                 </div>
+
+                <CollectionScheduleEditor
+                  serviceId={service.id}
+                  collectionDate={service.collection_date}
+                  collectionTime={service.collection_time}
+                />
 
               </div>
 

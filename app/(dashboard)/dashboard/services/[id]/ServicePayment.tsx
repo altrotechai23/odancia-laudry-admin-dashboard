@@ -37,6 +37,7 @@ export default function ServicePayment({
 }: ServicePaymentProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [staffPasscode, setStaffPasscode] = useState("");
+  const [showActionMessage, setShowActionMessage] = useState(false);
   const [rows, setRows] = useState<PaymentRow[]>([
     { id: 1, amount: "", method: "cash" },
   ]);
@@ -79,12 +80,17 @@ export default function ServicePayment({
         paymentMethod: String(methods[index] ?? "cash"),
       }));
       if (entries.length !== rows.length || !validBatch) {
-        setStaffPasscode("");
+        setShowActionMessage(true);
         return { success: false, message: "Enter valid payment amounts, a total within the outstanding balance, and 0000 for the logged-in admin or a valid on-duty staff code." };
       }
       const result = await updateServicePayment(serviceId, entries, staffPasscode);
-      setStaffPasscode("");
-      if (result.success) window.location.reload();
+      setShowActionMessage(true);
+      // Keep the attempted passcode visible after an error so the operator can
+      // correct it; only clear it after a successful save or when closing.
+      if (result.success) {
+        setStaffPasscode("");
+        window.location.reload();
+      }
       return result;
     },
     initialState,
@@ -94,6 +100,7 @@ export default function ServicePayment({
     setRows([{ id: 1, amount: "", method: "cash" }]);
     setNextId(2);
     setStaffPasscode("");
+    setShowActionMessage(false);
     setIsOpen(true);
   }
 
@@ -101,6 +108,7 @@ export default function ServicePayment({
     if (!isPending) {
       setIsOpen(false);
       setStaffPasscode("");
+      setShowActionMessage(false);
     }
   }
 
@@ -159,7 +167,7 @@ export default function ServicePayment({
           )}
         </div>
 
-        {state.message && <div role="status" className={`rounded-xl px-3 py-2 text-xs ${state.success ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"}`}>{state.message}</div>}
+        {state.success && state.message && <div role="status" className="rounded-xl bg-emerald-50 px-3 py-2 text-xs text-emerald-700">{state.message}</div>}
         <PaymentBadge status={status} />
         {outstanding > 0 ? (
           <button type="button" onClick={openEditor} className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-800 px-4 py-3 text-xs font-semibold text-white transition hover:bg-blue-900">
@@ -204,11 +212,11 @@ export default function ServicePayment({
 
               <div className="rounded-2xl border border-blue-100 bg-blue-50/60 p-3 sm:p-4">
                 <label htmlFor={`staff-payment-passcode-${serviceId}`} className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-blue-900">Admin code (0000) or on-duty staff code</label>
-                <input id={`staff-payment-passcode-${serviceId}`} type="password" autoComplete="off" inputMode="numeric" pattern="[0-9]{4}" minLength={4} maxLength={4} value={staffPasscode} onChange={(event) => setStaffPasscode(event.target.value.replace(/\D/g, "").slice(0, 4))} required disabled={isPending} placeholder="Enter four digits" className="mt-2 h-11 w-full rounded-xl border border-blue-100 bg-white px-3 text-sm tracking-[0.35em] text-slate-950 outline-none focus:border-blue-500 disabled:opacity-50" />
+                <input id={`staff-payment-passcode-${serviceId}`} type="password" autoComplete="off" inputMode="numeric" pattern="[0-9]{4}" minLength={4} maxLength={4} value={staffPasscode} onChange={(event) => { setStaffPasscode(event.target.value.replace(/\D/g, "").slice(0, 4)); setShowActionMessage(false); }} required disabled={isPending} placeholder="Enter four digits" className="mt-2 h-11 w-full rounded-xl border border-blue-100 bg-white px-3 text-sm tracking-[0.35em] text-slate-950 outline-none focus:border-blue-500 disabled:opacity-50" />
                 <p className="mt-2 text-[11px] leading-5 text-blue-900/70">Use 0000 to attribute this payment to the currently logged-in admin, or use an active staff member’s unique code while they are clocked in. Viewing payment details does not require a code.</p>
               </div>
 
-              {state.message && !state.success && <div role="alert" className="rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700">{state.message}</div>}
+              {showActionMessage && state.message && !state.success && <div role="alert" className="rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700">{state.message}</div>}
 
               {rows.length < 4 && <button type="button" onClick={addRow} disabled={isPending} className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-xl border border-dashed border-neutral-300 px-3 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"><Plus className="h-4 w-4" /> Add another method</button>}
 

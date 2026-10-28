@@ -28,3 +28,13 @@ Example template: `public/book-services-example.json`. Accepted date values are 
 ## Next.js documentation
 
 This application uses Next.js App Router. See [Next.js documentation](https://nextjs.org/docs) for framework information.
+
+
+## Phase 8 — collection schedule repair and urgency sorting
+
+- Existing services can now have collection date/time added or corrected from the service details page. The change uses the normal four-digit authorization flow and is recorded in audit logs.
+- The Services page defaults to urgency sorting. Uncollected services are ordered by their actual deadline; express services use the four-hour expected-completion target and regular services use their promised collection date/time. Collected services fall to the bottom. Use the Sort control to choose collection soonest, express first, or newest first.
+- JSON import extracts time from combined `collection_at` / `collection_datetime` fields, improves the file picker for iPad/iOS, and can backfill only missing collection date/time values for records already imported with the same import key. It does not replace schedule fields already recorded.
+- Payment authorization messages are reset when the dialog is opened or the passcode is edited, so a stale invalid-code warning does not appear for a new payment attempt.
+
+No new Supabase migration is required for Phase 8 if `202610280004_book_import_collection_time.sql` was successfully applied earlier. That migration adds `services.collection_time` and `services.import_source_key`. The schedule editor uses the existing collection columns and the existing staff-operation authorization/audit tables.

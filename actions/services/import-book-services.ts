@@ -45,6 +45,7 @@ export type BookImportResult = {
   message: string;
   imported: number;
   skipped: number;
+  scheduleUpdated: number;
   failed: BookImportFailure[];
 };
 
@@ -118,7 +119,7 @@ function normaliseDate(value: unknown): string | null {
   if (iso) {
     year = Number(iso[1]); month = Number(iso[2]); day = Number(iso[3]);
   } else {
-    const local = text.match(/^(\d{1,2})[/.\-](\d{1,2})[/.\-](\d{4})$/);
+    const local = text.match(/^(\d{1,2})[/.\-](\d{1,2})[/.\-](\d{4})(?:[ T].*)?$/);
     if (!local) return null;
     // Book dates are interpreted in South African day/month/year order.
     day = Number(local[1]); month = Number(local[2]); year = Number(local[3]);
@@ -154,8 +155,8 @@ function normaliseTime(value: unknown): string | null {
   };
 
   // First accept common date-time strings such as 2026-10-29T15:30:00+02:00.
-  const dateTime = text.match(/[T ](\d{1,2}):(\d{2})(?::\d{2})?/);
-  if (dateTime) return format(dateTime[1], dateTime[2]);
+  const dateTime = text.match(/[T ](\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?/i);
+  if (dateTime) return format(dateTime[1], dateTime[2], dateTime[3]);
 
   const standard = text.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?$/i);
   if (standard) return format(standard[1], standard[2], standard[3]);
@@ -197,9 +198,24 @@ function sourceKeyFor(record: JsonObject, index: number): string {
   const externalId = textValue(valueOf(record, [
     "source_id", "book_id", "external_id", "record_id", "service_number", "order_number", "receipt_number", "reference", "id",
   ]));
+  // Book exports often get enriched after the first import (for example, the
+  // collection date/time is added later). Exclude schedule/payment fields from
+  // the fallback fingerprint so a re-import can backfill a missing schedule
+  // instead of accidentally creating a duplicate service. The row index keeps
+  // otherwise identical same-day services distinct when the book has no ID.
+  const mutableFields = new Set([
+    "collectiondate", "collectionduedate", "duedate", "expectedcollectiondate", "collectdate",
+    "collectiontime", "pickuptime", "duetime", "collectionclocktime", "collectionat",
+    "collectiondatetime", "pickupat", "collectiondatetimelocal", "payments", "paymenthistory",
+    "transactions", "deposit", "depositamount", "downpayment", "amountpaid", "paidamount",
+    "totalpaid", "paid", "amountreceived",
+  ]);
+  const stableRecord = Object.fromEntries(
+    Object.entries(record).filter(([key]) => !mutableFields.has(keyName(key))),
+  );
   const input = externalId
     ? `book-reference:${externalId.toLowerCase()}`
-    : `book-row:${index}:${canonicalJson(record)}`;
+    : `book-row:${index}:${canonicalJson(stableRecord)}`;
   return createHash("sha256").update(input).digest("hex");
 }
 
@@ -299,10 +315,13 @@ function prepareRecord(record: JsonObject, index: number): { data: PreparedServi
   const serviceTimeRaw = valueOf(record, ["service_time", "time_received", "received_time", "serviceTime", "time"]);
   const serviceTime = serviceTimeRaw === undefined ? null : normaliseTime(serviceTimeRaw);
   if (serviceTimeRaw !== undefined && !serviceTime) return { data: null, error: "Service time is invalid. Use HH:mm or a value such as 2:30 PM.", label, sourceKey };
-  const collectionTimeRaw = valueOf(record, ["collection_time", "collectionTime", "pickup_time", "due_time", "collection_clock_time"])
-    ?? (combinedCollection !== undefined ? combinedCollection : undefined);
-  const collectionTime = collectionTimeRaw === undefined ? null : normaliseTime(collectionTimeRaw);
-  if (collectionTimeRaw !== undefined && !collectionTime) return { data: null, error: "Collection time is invalid. Use HH:mm or a value such as 2:30 PM.", label, sourceKey };
+  const explicitCollectionTimeRaw = valueOf(record, ["collection_time", "collectionTime", "pickup_time", "due_time", "collection_clock_time"]);
+  // Some exports store collection date and time together in collection_at /
+  // collection_datetime or even in collection_date. Preserve the time portion.
+  const collectionTimeSource = explicitCollectionTimeRaw ?? combinedCollection ?? collectionDateRaw;
+  const parsedCollectionTime = collectionTimeSource === undefined ? null : normaliseTime(collectionTimeSource);
+  const collectionTime = parsedCollectionTime;
+  if (explicitCollectionTimeRaw !== undefined && !collectionTime) return { data: null, error: "Collection time is invalid. Use HH:mm or a value such as 2:30 PM.", label, sourceKey };
 
   const serviceTypeRaw = valueOf(record, ["service_type_name", "service_type", "serviceType", "service_types", "type_of_service", "laundry_type", "type"]);
   const serviceTypeObject = asObject(serviceTypeRaw) ?? (Array.isArray(serviceTypeRaw) ? asObject(serviceTypeRaw[0]) : null);
@@ -354,7 +373,7 @@ function expressTimestamps(serviceDate: string, serviceTime: string | null) {
 }
 
 export async function importBookServices(rawJson: string, submittedAdminCode: string): Promise<BookImportResult> {
-  const emptyResult = (message: string): BookImportResult => ({ success: false, message, imported: 0, skipped: 0, failed: [] });
+  const emptyResult = (message: string): BookImportResult => ({ success: false, message, imported: 0, skipped: 0, scheduleUpdated: 0, failed: [] });
   const actor = await requireOwnerOrAdmin();
 
   if (typeof rawJson !== "string" || !rawJson.trim()) return emptyResult("Choose a JSON file first.");
@@ -386,7 +405,7 @@ export async function importBookServices(rawJson: string, submittedAdminCode: st
     }
     prepared.push(result.data);
   }
-  if (prepared.length === 0) return { success: false, message: "No valid service records to import. Check the row errors below.", imported: 0, skipped: 0, failed };
+  if (prepared.length === 0) return { success: false, message: "No valid service records to import. Check the row errors below.", imported: 0, skipped: 0, scheduleUpdated: 0, failed };
 
   // Imports are bulk CRUD operations and are restricted to the currently logged-in admin.
   // Do not allow an on-duty staff passcode to invoke the book importer.
@@ -411,15 +430,23 @@ export async function importBookServices(rawJson: string, submittedAdminCode: st
 
   const sourceKeys = prepared.map((row) => row.sourceKey);
   const existingKeys = new Set<string>();
+  const existingByKey = new Map<string, { id: string; collection_date: string | null; collection_time: string | null }>();
   for (const batch of chunks(sourceKeys, 100)) {
-    const { data, error } = await admin.from("services").select("import_source_key").in("import_source_key", batch);
+    const { data, error } = await admin.from("services")
+      .select("id,import_source_key,collection_date,collection_time")
+      .in("import_source_key", batch);
     if (error) {
       console.error("BOOK IMPORT DUPLICATE CHECK FAILED", error.message);
       return emptyResult(error.code === "42703"
         ? "The import database migration is not installed. Apply 202610280004_book_import_collection_time.sql, then retry."
         : `Unable to prepare the import: ${error.message}`);
     }
-    for (const row of data ?? []) if (row.import_source_key) existingKeys.add(String(row.import_source_key));
+    for (const row of data ?? []) {
+      if (!row.import_source_key) continue;
+      const key = String(row.import_source_key);
+      existingKeys.add(key);
+      existingByKey.set(key, { id: row.id, collection_date: row.collection_date, collection_time: row.collection_time });
+    }
   }
 
   const { data: serviceTypes, error: serviceTypesError } = await admin.from("service_types").select("id,name");
@@ -456,10 +483,38 @@ export async function importBookServices(rawJson: string, submittedAdminCode: st
 
   let imported = 0;
   let skipped = 0;
+  let scheduleUpdated = 0;
   const auditRows: Array<Record<string, unknown>> = [];
 
   for (const row of prepared) {
     if (existingKeys.has(row.sourceKey)) {
+      const existing = existingByKey.get(row.sourceKey);
+      const schedulePatch: Record<string, unknown> = {};
+      // Re-imports never overwrite a schedule that already exists. They only
+      // backfill missing date/time values when the book supplies them.
+      if (existing && !existing.collection_date && row.collectionDate) schedulePatch.collection_date = row.collectionDate;
+      if (existing && !existing.collection_time && row.collectionTime) schedulePatch.collection_time = row.collectionTime;
+      if (existing && Object.keys(schedulePatch).length > 0) {
+        const { error: scheduleError } = await admin.from("services").update({
+          ...schedulePatch, updated_by: actor.id, updated_at: new Date().toISOString(),
+        }).eq("id", existing.id);
+        if (scheduleError) {
+          failed.push({ row: row.index + 1, service: row.serviceNumber || row.clientName, message: `Existing service was found, but its missing collection schedule could not be filled: ${scheduleError.message}` });
+          continue;
+        }
+        scheduleUpdated += 1;
+        existingByKey.set(row.sourceKey, {
+          ...existing,
+          collection_date: (schedulePatch.collection_date as string | undefined) ?? existing.collection_date,
+          collection_time: (schedulePatch.collection_time as string | undefined) ?? existing.collection_time,
+        });
+        auditRows.push({
+          table_name: "services", record_id: existing.id, action: "IMPORT_BACKFILL_COLLECTION_SCHEDULE",
+          actor_id: actor.id, actor_name: actor.full_name,
+          old_data: { collection_date: existing.collection_date, collection_time: existing.collection_time },
+          new_data: schedulePatch,
+        });
+      }
       skipped += 1;
       continue;
     }
@@ -601,6 +656,7 @@ export async function importBookServices(rawJson: string, submittedAdminCode: st
     if (row.phone) clientByPhone.set(normalisePhone(row.phone), clientId);
     clientByName.set(normaliseName(row.clientName), clientId);
     existingKeys.add(row.sourceKey);
+    existingByKey.set(row.sourceKey, { id: service.id, collection_date: row.collectionDate, collection_time: row.collectionTime });
     imported += 1;
   }
 
@@ -615,8 +671,8 @@ export async function importBookServices(rawJson: string, submittedAdminCode: st
   revalidatePath("/dashboard/activity");
 
   const success = failed.length === 0;
-  const message = `${imported} service${imported === 1 ? "" : "s"} imported, ${skipped} duplicate${skipped === 1 ? "" : "s"} skipped, ${failed.length} row${failed.length === 1 ? "" : "s"} need attention.`;
-  return { success, message, imported, skipped, failed };
+  const message = `${imported} service${imported === 1 ? "" : "s"} imported, ${skipped} duplicate${skipped === 1 ? "" : "s"} skipped, ${scheduleUpdated} existing schedule${scheduleUpdated === 1 ? "" : "s"} backfilled, ${failed.length} row${failed.length === 1 ? "" : "s"} need attention.`;
+  return { success, message, imported, skipped, scheduleUpdated, failed };
   } finally {
     await clearStaffWriteAuthorization(authorization.authorizationId);
   }

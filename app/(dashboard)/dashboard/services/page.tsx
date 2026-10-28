@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import {
   ArrowRight,
+  ArrowUpDown,
   Banknote,
   CalendarDays,
   CheckCircle2,
@@ -32,10 +33,13 @@ type ServiceStatusFilter =
   | "collected"
   | "all";
 
+type ServiceSort = "urgency" | "collection" | "express" | "newest";
+
 type ServicesPageProps = {
   searchParams: Promise<{
     q?: string;
     status?: string;
+    sort?: string;
   }>;
 };
 
@@ -62,6 +66,55 @@ function parseServiceStatus(
   }
 }
 
+function parseServiceSort(value: string | undefined): ServiceSort {
+  if (value === "collection" || value === "express" || value === "newest") return value;
+  return "urgency";
+}
+
+function collectionDeadline(service: LaundryService): number | null {
+  if (service.service_status === "collected") return null;
+
+  if (service.is_express) {
+    const expected = service.expected_completion_at ? Date.parse(service.expected_completion_at) : Number.NaN;
+    if (Number.isFinite(expected)) return expected;
+    const created = Date.parse(service.created_at);
+    return Number.isFinite(created) ? created + 4 * 60 * 60 * 1000 : null;
+  }
+
+  if (!service.collection_date) return null;
+  const time = service.collection_time ? service.collection_time.slice(0, 5) : "23:59";
+  const due = Date.parse(`${service.collection_date}T${time}:00+02:00`);
+  return Number.isFinite(due) ? due : null;
+}
+
+function sortServices(items: LaundryService[], sort: ServiceSort): LaundryService[] {
+  return [...items].sort((left, right) => {
+    if (sort === "newest") return Date.parse(right.created_at) - Date.parse(left.created_at);
+
+    const leftDone = left.service_status === "collected";
+    const rightDone = right.service_status === "collected";
+    if (leftDone !== rightDone) return leftDone ? 1 : -1;
+
+    if (sort === "express" && left.is_express !== right.is_express) return left.is_express ? -1 : 1;
+
+    let leftDeadline: number | null;
+    let rightDeadline: number | null;
+    if (sort === "collection") {
+      leftDeadline = left.collection_date ? Date.parse(`${left.collection_date}T${(left.collection_time ?? "23:59").slice(0, 5)}:00+02:00`) : null;
+      rightDeadline = right.collection_date ? Date.parse(`${right.collection_date}T${(right.collection_time ?? "23:59").slice(0, 5)}:00+02:00`) : null;
+    } else {
+      leftDeadline = collectionDeadline(left);
+      rightDeadline = collectionDeadline(right);
+    }
+
+    if (leftDeadline !== null && rightDeadline !== null && leftDeadline !== rightDeadline) return leftDeadline - rightDeadline;
+    if (leftDeadline !== null && rightDeadline === null) return -1;
+    if (leftDeadline === null && rightDeadline !== null) return 1;
+    if (sort === "urgency" && left.is_express !== right.is_express) return left.is_express ? -1 : 1;
+    return Date.parse(right.created_at) - Date.parse(left.created_at);
+  });
+}
+
 
 /* ============================================================
    FILTER URL
@@ -70,6 +123,7 @@ function parseServiceStatus(
 function buildFilterUrl(
   status: ServiceStatusFilter,
   query: string,
+  sort: ServiceSort,
 ) {
   const params = new URLSearchParams();
 
@@ -96,6 +150,7 @@ function buildFilterUrl(
       status,
     );
   }
+  if (sort !== "urgency") params.set("sort", sort);
 
   const search =
     params.toString();
@@ -139,11 +194,9 @@ export default async function ServicesPage({
     parseServiceStatus(
       params.status,
     );
+  const sort = parseServiceSort(params.sort);
 
-  const {
-    services: allServices,
-    summary: allSummary,
-  } = await getServices();
+  const { services: allServices } = await getServices();
 
 
   /* ==========================================================
@@ -199,6 +252,9 @@ export default async function ServicesPage({
   /* ==========================================================
      FILTERED SUMMARY
   ========================================================== */
+
+  // Default view prioritizes the nearest service deadline (express jobs use their 4-hour target).
+  services = sortServices(services, sort);
 
   const summary =
     buildSummary(services);
@@ -335,12 +391,9 @@ export default async function ServicesPage({
               >
 
                 {status !== "all" && (
-                  <input
-                    type="hidden"
-                    name="status"
-                    value={status}
-                  />
+                  <input type="hidden" name="status" value={status} />
                 )}
+                {sort !== "urgency" && <input type="hidden" name="sort" value={sort} />}
 
                 <div className="relative">
 
@@ -359,6 +412,19 @@ export default async function ServicesPage({
               </form>
 
 
+              <form action="/dashboard/services" method="GET" className="flex min-h-11 flex-wrap items-center gap-2">
+                {query.trim() && <input type="hidden" name="q" value={query.trim()} />}
+                {status !== "all" && <input type="hidden" name="status" value={status} />}
+                <label htmlFor="services-sort" className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold text-neutral-500"><ArrowUpDown className="h-4 w-4" /> Sort</label>
+                <select id="services-sort" name="sort" defaultValue={sort} className="h-11 min-w-0 rounded-xl border border-black/[0.07] bg-white px-3 text-xs font-semibold text-neutral-700 outline-none focus:border-blue-500">
+                  <option value="urgency">Urgency (recommended)</option>
+                  <option value="collection">Collection soonest</option>
+                  <option value="express">Express first</option>
+                  <option value="newest">Newest first</option>
+                </select>
+                <button type="submit" className="h-11 rounded-xl bg-blue-800 px-3 text-xs font-semibold text-white hover:bg-blue-900">Apply</button>
+              </form>
+
               {/* Filters */}
 
               <div className="flex gap-2 overflow-x-auto">
@@ -367,6 +433,7 @@ export default async function ServicesPage({
                   href={buildFilterUrl(
                     "all",
                     query,
+                    sort,
                   )}
                   active={
                     status === "all"
@@ -380,6 +447,7 @@ export default async function ServicesPage({
                   href={buildFilterUrl(
                     "pending",
                     query,
+                    sort,
                   )}
                   active={
                     status === "pending"
@@ -393,6 +461,7 @@ export default async function ServicesPage({
                   href={buildFilterUrl(
                     "ready_for_collection",
                     query,
+                    sort,
                   )}
                   active={
                     status ===
@@ -407,6 +476,7 @@ export default async function ServicesPage({
                   href={buildFilterUrl(
                     "collected",
                     query,
+                    sort,
                   )}
                   active={
                     status === "collected"
@@ -449,7 +519,7 @@ export default async function ServicesPage({
 
 
                 <Link
-                  href="/dashboard/services"
+                  href={sort === "urgency" ? "/dashboard/services" : `/dashboard/services?sort=${sort}`}
                   className="ml-1 text-[11px] font-medium text-neutral-500 underline-offset-2 transition hover:text-neutral-950 hover:underline"
                 >
                   Clear filters
@@ -515,7 +585,7 @@ export default async function ServicesPage({
                       </TableHeader>
 
                       <TableHeader>
-                        Collection
+                        Collection / urgency
                       </TableHeader>
 
                       <TableHeader>
@@ -785,6 +855,25 @@ function ServiceCellLink({
   );
 }
 
+function UrgencyFlag({ service }: { service: LaundryService }) {
+  if (service.service_status === "collected") return null;
+  const due = collectionDeadline(service);
+  if (due === null) {
+    return <span className="mt-1 inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-800">Schedule needed</span>;
+  }
+  const difference = due - Date.now();
+  if (difference < 0) {
+    return <span className="mt-1 inline-flex rounded-full bg-red-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-red-800">Overdue</span>;
+  }
+  if (service.is_express) {
+    return <span className="mt-1 inline-flex rounded-full bg-red-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-red-700">Express deadline</span>;
+  }
+  if (difference <= 24 * 60 * 60 * 1000) {
+    return <span className="mt-1 inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-800">Due within 24h</span>;
+  }
+  return null;
+}
+
 function paymentMethodLabel(method: string) {
   switch (method.toLowerCase()) {
     case "cash": return "Cash";
@@ -804,6 +893,7 @@ function ServiceRow({ service }: { service: LaundryService }) {
             {service.service_number ?? shortServiceId(service.id)}
           </div>
           {service.is_express && <span className="mt-1 inline-flex rounded-full bg-red-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-red-700">Express</span>}
+          <UrgencyFlag service={service} />
           <p className="mt-1 text-[11px] text-neutral-400">{formatDate(service.service_date)}{service.service_time ? ` · ${formatTime(service.service_time)}` : ""}</p>
         </ServiceCellLink>
       </td>
@@ -886,6 +976,7 @@ function ServiceCard({ service }: { service: LaundryService }) {
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-[10px] font-medium text-neutral-600">{service.service_type_name ?? "Laundry service"}</span>
         {service.is_express && <span className="rounded-full bg-red-50 px-2.5 py-1 text-[10px] font-bold text-red-700">Express</span>}
+        <UrgencyFlag service={service} />
       </div>
       <div className="mt-4 grid grid-cols-2 gap-2.5">
         <MobileDetail label="Total" value={formatCurrency(service.price)} />

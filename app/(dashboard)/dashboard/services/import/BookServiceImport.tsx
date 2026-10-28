@@ -28,6 +28,20 @@ function display(value: unknown) {
   if (typeof value === "object") return JSON.stringify(value);
   return String(value);
 }
+function collectionValue(record: JsonObject, kind: "date" | "time") {
+  const explicitDate = field(record, ["collection_date", "collectionDate", "collection_due_date", "due_date", "expected_collection_date", "collect_date"]);
+  const explicitTime = field(record, ["collection_time", "collectionTime", "pickup_time", "due_time", "collection_clock_time"]);
+  const combined = field(record, ["collection_at", "collection_datetime", "pickup_at", "collection_datetime_local"]);
+  const source = kind === "date" ? (explicitDate ?? combined) : (explicitTime ?? combined ?? explicitDate);
+  if (source === null || source === undefined || source === "") return "—";
+  if (kind === "time") {
+    const match = String(source).match(/[T ](\d{1,2}:\d{2})(?::\d{2})?/);
+    return display(explicitTime ?? match?.[1] ?? (String(source).match(/^\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM)?$/i) ? source : "—"));
+  }
+  const match = String(source).match(/^(\d{4}-\d{2}-\d{2}|\d{1,2}[/.\-]\d{1,2}[/.\-]\d{4})/);
+  return display(match?.[1] ?? source);
+}
+
 function customer(record: JsonObject) {
   const value = field(record, ["client_name", "customer_name", "full_name", "name"]);
   if (value) return display(value);
@@ -54,12 +68,17 @@ export default function BookServiceImport() {
 
   async function handleFile(file?: File) {
     if (!file) return;
+    // Reset the input value after capturing the File so the same attachment can be selected again.
+    if (fileRef.current) fileRef.current.value = "";
     setFileError("");
     setResult(null);
     setRecords([]);
     setRawJson("");
-    if (!file.name.toLowerCase().endsWith(".json") && file.type !== "application/json") {
-      setFileError("Please choose a .json file.");
+    // On iPad/iOS, the Files picker may report an empty or generic MIME type.
+    // Read the selected file and validate its JSON contents instead of relying on MIME alone.
+    if (file.type && !["application/json", "text/json", "text/plain", "application/octet-stream", ""].includes(file.type)
+      && !file.name.toLowerCase().endsWith(".json")) {
+      setFileError("Please choose a JSON file exported from your book.");
       return;
     }
     if (file.size > 800_000) {
@@ -116,12 +135,12 @@ export default function BookServiceImport() {
       </div>
 
       <div className="p-5 sm:p-6">
-        <input ref={fileRef} type="file" accept=".json,application/json" className="sr-only" onChange={(event) => void handleFile(event.target.files?.[0])} />
-        <button type="button" onClick={() => fileRef.current?.click()} className="flex min-h-40 w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-blue-200 bg-blue-50/40 px-5 py-7 text-center transition hover:border-blue-400 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/20">
+        <input id="book-import-json-file" ref={fileRef} type="file" accept=".json,.txt,application/json,text/json,text/plain" className="sr-only" onChange={(event) => void handleFile(event.target.files?.[0])} />
+        <label htmlFor="book-import-json-file" role="button" tabIndex={0} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); fileRef.current?.click(); } }} className="flex min-h-40 w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-blue-200 bg-blue-50/40 px-5 py-7 text-center transition hover:border-blue-400 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/20">
           <FileUp className="h-8 w-8 text-blue-800" />
           <span className="mt-3 text-sm font-bold text-blue-950">{fileName || "Choose JSON file"}</span>
           <span className="mt-1 text-xs text-slate-500">Tap to browse files on this device</span>
-        </button>
+        </label>
 
         {fileError && <div role="alert" className="mt-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />{fileError}</div>}
 
@@ -136,7 +155,7 @@ export default function BookServiceImport() {
                 <div key={`${index}-${display(field(record, ["service_number", "service_no", "id"]))}`} className="grid gap-2 p-4 sm:grid-cols-[1.2fr_1fr_0.8fr] sm:items-center">
                   <div className="min-w-0"><p className="truncate text-sm font-semibold text-slate-900">{customer(record)}</p><p className="mt-0.5 truncate text-xs text-slate-500">{display(field(record, ["service_number", "service_no", "order_number"]) ?? `JSON row ${index + 1}`)}</p></div>
                   <div><p className="text-xs font-medium text-slate-600">{display(field(record, ["service_type_name", "service_type", "type_of_service", "type"]))}</p><p className="mt-0.5 text-xs text-slate-500">Total: {display(field(record, ["total_price", "total", "price", "service_price", "amount"]))}</p></div>
-                  <div className="rounded-xl border border-red-100 bg-red-50/60 px-3 py-2"><p className="text-[10px] font-bold uppercase tracking-wide text-red-700">Collection</p><p className="mt-1 text-xs font-semibold text-blue-950">{display(field(record, ["collection_date", "collectionDate", "due_date", "collection_at"]))}</p><p className="text-xs font-medium text-red-700">{display(field(record, ["collection_time", "collectionTime", "pickup_time"]))}</p></div>
+                  <div className="rounded-xl border border-red-100 bg-red-50/60 px-3 py-2"><p className="text-[10px] font-bold uppercase tracking-wide text-red-700">Collection</p><p className="mt-1 text-xs font-semibold text-blue-950">{collectionValue(record, "date")}</p><p className="text-xs font-medium text-red-700">{collectionValue(record, "time")}</p></div>
                 </div>
               ))}
             </div>
@@ -159,9 +178,10 @@ export default function BookServiceImport() {
               {result.success ? <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" /> : <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />}
               <div><p className="text-sm font-bold">{result.success ? "Import completed" : "Import completed with notes"}</p><p className="mt-1 text-sm leading-6">{result.message}</p></div>
             </div>
-            <div className="mt-4 grid grid-cols-3 gap-2">
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
               <div className="rounded-xl bg-emerald-50 p-3"><p className="text-xs text-emerald-800">Imported</p><p className="mt-1 text-xl font-bold text-emerald-950">{result.imported}</p></div>
               <div className="rounded-xl bg-blue-50 p-3"><p className="text-xs text-blue-800">Duplicates skipped</p><p className="mt-1 text-xl font-bold text-blue-950">{result.skipped}</p></div>
+              <div className="rounded-xl bg-cyan-50 p-3"><p className="text-xs text-cyan-800">Schedules completed</p><p className="mt-1 text-xl font-bold text-cyan-950">{result.scheduleUpdated}</p></div>
               <div className="rounded-xl bg-red-50 p-3"><p className="text-xs text-red-800">Failed rows</p><p className="mt-1 text-xl font-bold text-red-950">{result.failed.length}</p></div>
             </div>
             {result.failed.length > 0 && <div className="mt-4 max-h-72 overflow-y-auto rounded-xl border border-red-100"><div className="border-b border-red-100 bg-red-50 p-3 text-xs font-bold text-red-900">Rows to review</div><div className="divide-y divide-slate-100">{result.failed.map((failure) => <div key={`${failure.row}-${failure.service}`} className="p-3"><p className="text-xs font-bold text-slate-900">Row {failure.row} · {failure.service}</p><p className="mt-1 text-xs leading-5 text-red-700">{failure.message}</p></div>)}</div></div>}
