@@ -846,7 +846,15 @@ function ServiceRow({ service }: { service: LaundryService }) {
       <td className="px-5 py-4 align-top"><ServiceCellLink href={href}><StatusBadge status={service.service_status} /></ServiceCellLink></td>
       <td className="px-5 py-4 align-top">
         <ServiceCellLink href={href}>
-          <div className="flex items-center gap-2">{service.fulfillment_method === "delivery" ? <Truck className="h-3.5 w-3.5 text-neutral-400" /> : <Package className="h-3.5 w-3.5 text-neutral-400" />}<div><p className="text-xs font-medium text-neutral-700">{service.collection_date ? formatDate(service.collection_date) : "Not set"}</p><p className="mt-0.5 text-[10px] text-neutral-400">{service.fulfillment_method === "delivery" ? "Delivery" : "Pickup"}</p></div></div>
+          <div className="min-w-[150px] rounded-xl border border-red-100 bg-red-50/70 px-3 py-2.5 shadow-sm shadow-red-900/[0.02]">
+            <div className="flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-[0.12em] text-red-700">
+              {service.fulfillment_method === "delivery" ? <Truck className="h-3.5 w-3.5" /> : <Package className="h-3.5 w-3.5" />}
+              Collection due
+            </div>
+            <p className="mt-1.5 text-sm font-extrabold text-blue-950">{service.collection_date ? formatDate(service.collection_date) : "Date not set"}</p>
+            <p className="mt-0.5 text-xs font-bold text-red-700">{service.collection_time ? formatTime(service.collection_time) : "Time not recorded"}</p>
+            <p className="mt-1 text-[10px] font-medium text-slate-500">{service.fulfillment_method === "delivery" ? "Delivery" : "Pickup"}</p>
+          </div>
         </ServiceCellLink>
       </td>
       <td className="px-5 py-4 align-top"><ServiceCellLink href={href}><p className="text-xs text-neutral-600">{service.staff_name ?? "—"}</p></ServiceCellLink></td>
@@ -882,7 +890,7 @@ function ServiceCard({ service }: { service: LaundryService }) {
       <div className="mt-4 grid grid-cols-2 gap-2.5">
         <MobileDetail label="Total" value={formatCurrency(service.price)} />
         <MobileDetail label="Balance" value={formatCurrency(service.balance)} highlight={service.balance > 0} />
-        <MobileDetail label="Collection" value={service.collection_date ? formatDate(service.collection_date) : "Not set"} />
+        <div className="rounded-xl border border-red-100 bg-red-50/70 p-3.5"><p className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-red-700">Collection date</p><p className="mt-1.5 text-sm font-extrabold text-blue-950">{service.collection_date ? formatDate(service.collection_date) : "Date not set"}</p><p className="mt-1 text-xs font-bold text-red-700">{service.collection_time ? formatTime(service.collection_time) : "Collection time not recorded"}</p></div>
         <MobileDetail label="Received by" value={service.staff_name ?? "Not recorded"} />
       </div>
       <div className="mt-3 rounded-xl border border-neutral-100 bg-slate-50/80 p-3">

@@ -19,6 +19,7 @@ type NewServiceSmsParams = {
   serviceId: string;
   serviceDate: string;
   collectionDate: string;
+  collectionTime?: string | null;
   numberOfItems?: number | null;
   fulfillmentMethod: "customer_pickup" | "delivery";
   totalPrice: number;
@@ -33,6 +34,7 @@ type ReadyForCollectionSmsParams = {
   serviceDescription?: string | null;
   serviceId: string;
   collectionDate: string;
+  collectionTime?: string | null;
   numberOfItems?: number | null;
   fulfillmentMethod: "customer_pickup" | "delivery";
   totalPrice: number;
@@ -360,6 +362,7 @@ export async function sendNewServiceSms({
   serviceId,
   serviceDate,
   collectionDate,
+  collectionTime,
   numberOfItems,
   fulfillmentMethod,
   totalPrice,
@@ -401,7 +404,7 @@ export async function sendNewServiceSms({
     ``,
     `REF ${reference}`,
     `Received: ${formatDate(serviceDate)}`,
-    `Collection: ${formatDate(collectionDate)}`,
+    `Collection: ${formatDate(collectionDate)}${collectionTime ? ` at ${formatClockTime(collectionTime)}` : ""}`,
     itemLine,
     `Method: ${fulfillment}`,
     ``,
@@ -436,6 +439,7 @@ export async function sendReadyForCollectionSms({
   serviceDescription,
   serviceId,
   collectionDate,
+  collectionTime,
   numberOfItems,
   fulfillmentMethod,
   totalPrice,
@@ -478,7 +482,7 @@ export async function sendReadyForCollectionSms({
       : null,
     ``,
     `REF ${reference}`,
-    `Collection: ${formatDate(collectionDate)}`,
+    `Collection: ${formatDate(collectionDate)}${collectionTime ? ` at ${formatClockTime(collectionTime)}` : ""}`,
     itemLine,
     `Method: ${fulfillment}`,
     ``,

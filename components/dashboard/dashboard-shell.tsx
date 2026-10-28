@@ -266,6 +266,16 @@ function NavigationIcon({
     );
   }
 
+  if (type === "import") {
+    return (
+      <svg {...common}>
+        <path d="M12 3v12" />
+        <path d="m7 10 5 5 5-5" />
+        <path d="M4 17v3h16v-3" />
+      </svg>
+    );
+  }
+
   if (type === "clients") {
     return (
       <svg {...common}>

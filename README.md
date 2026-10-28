@@ -17,6 +17,14 @@ npm run dev
 
 Keep the existing `.env.local` and ensure the server-only `SUPABASE_SERVICE_ROLE_KEY` is present. Never expose it via a `NEXT_PUBLIC_` variable or commit `.env.local`.
 
+## Import services from the paper book (Phase 7)
+
+Administrators can open **Import from book** in the sidebar at `/dashboard/services/import`. Choose a JSON file, review the preview, enter the logged-in admin's `0000` code, and import up to 500 records (file limit 800 KB). The import matches existing clients by phone number when supplied, creates missing customers, reuses service types by name (creates a type if missing), inserts historical payments into the `payments` ledger, and writes an admin audit event. Re-importing the same service records skips them using `import_source_key`.
+
+Before using this page, apply the complete SQL file `supabase/migrations/202610280004_book_import_collection_time.sql` in Supabase SQL Editor. This additive migration adds `services.collection_time` and `services.import_source_key` plus a filtered unique index; it does not delete existing services or payment rows. Run the entire file as one query, not individual lines. New service creation now requires a collection time and the Services table emphasizes collection date/time in red and blue.
+
+Example template: `public/book-services-example.json`. Accepted date values are `YYYY-MM-DD` or South African `DD/MM/YYYY`; time values include `HH:mm` and common `AM/PM` forms. Service rows need a customer name and total/base price. Records without historical collection times remain blank rather than guessing. Imported historic payments are attributed to the currently logged-in administrator because the import action is admin-only.
+
 ## Next.js documentation
 
 This application uses Next.js App Router. See [Next.js documentation](https://nextjs.org/docs) for framework information.

@@ -33,6 +33,7 @@ export default function LoginForm() {
       </div>
       {state.error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm leading-5 text-red-700">{state.error}</div>}
       <SubmitButton />
+      <p className="text-center text-xs leading-5 text-slate-500">Staff do not sign in here. An administrator manages attendance, and a staff member’s 4-digit code is requested only for service changes.</p>
     </form>
   );
 }

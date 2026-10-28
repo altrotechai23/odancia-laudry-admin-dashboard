@@ -40,3 +40,15 @@ The server must have these environment variables configured in `.env.local` for 
 - `SUPABASE_SERVICE_ROLE_KEY` — server-only secret, never prefix with `NEXT_PUBLIC_`
 
 Never commit `.env.local` or send service-role keys in screenshots or chat.
+
+## Phase 7 — import services from the paper book and collection time
+
+After the simplified workflow migrations above have been applied, run this complete migration next:
+
+`migrations/202610280004_book_import_collection_time.sql`
+
+This additive migration adds `services.collection_time` and the nullable `services.import_source_key`, plus a filtered unique index used to skip previously imported book records. It does not delete or rewrite service or payment rows. Check that the final verification query returns `OK` for all three objects.
+
+The admin sidebar includes **Import from book** at `/dashboard/services/import`. Upload a JSON array (or `{ "services": [...] }`), review the preview, and enter `0000`. Imports are restricted to the currently signed-in owner/admin and are audited to that profile. The importer can create customers and missing service types, inserts historical payments into the existing `payments` ledger, and skips rows previously imported with the same source key. Use `public/book-services-example.json` as a starting template. Split input into files of at most 500 service objects and 800 KB each.
+
+The Services list and service detail view display collection date/time prominently. Newly created services require a collection date and time; historical records with no collection time remain blank rather than receiving a guessed time.

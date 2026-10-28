@@ -36,6 +36,7 @@ export async function notifyServiceReady(
         `
           id,
           collection_date,
+          collection_time,
           number_of_items,
           fulfillment_method,
           total_price,
@@ -147,6 +148,9 @@ export async function notifyServiceReady(
 
         collectionDate:
           service.collection_date,
+
+        collectionTime:
+          service.collection_time,
 
         numberOfItems:
           service.number_of_items,

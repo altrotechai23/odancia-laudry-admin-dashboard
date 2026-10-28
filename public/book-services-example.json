@@ -1,0 +1,51 @@
+[
+  {
+    "service_number": "BOOK-001",
+    "client_name": "Jane Dlamini",
+    "phone": "0821234567",
+    "email": "jane@example.com",
+    "service_type": "Dry Cleaning",
+    "service_date": "2026-10-26",
+    "service_time": "09:15",
+    "collection_date": "2026-10-29",
+    "collection_time": "15:30",
+    "total_price": "R 300,00",
+    "base_price": "R 300,00",
+    "is_express": false,
+    "service_status": "pending",
+    "fulfillment_method": "customer_pickup",
+    "number_of_items": 3,
+    "notes": "Book import example",
+    "payments": [
+      {
+        "amount": "R 100,00",
+        "payment_method": "cash",
+        "payment_stage": "deposit",
+        "reference": "BOOK-001-DEPOSIT",
+        "notes": "Deposit recorded in the book"
+      },
+      {
+        "amount": "R 50,00",
+        "payment_method": "eft",
+        "payment_stage": "partial",
+        "reference": "BOOK-001-EFT",
+        "notes": "Additional payment recorded in the book"
+      }
+    ]
+  },
+  {
+    "client": {
+      "name": "Sipho Mokoena",
+      "phone": "0831234567"
+    },
+    "service_type_name": "Wash and Fold",
+    "service_date": "26/10/2026",
+    "collection_date": "30/10/2026",
+    "collection_time": "10:00 AM",
+    "total_price": 180,
+    "deposit": 0,
+    "amount_paid": 0,
+    "payment_method": "cash",
+    "service_status": "pending"
+  }
+]

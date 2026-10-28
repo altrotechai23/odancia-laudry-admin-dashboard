@@ -454,23 +454,18 @@ export default async function ServiceDetailsPage({
 
                   <div>
 
-                    <p className="text-sm font-medium text-neutral-950">
-
+                    <p className="text-base font-extrabold text-blue-950">
                       {service.collection_date
-                        ? formatDate(
-                            service.collection_date,
-                          )
-                        : "Collection not set"}
-
+                        ? formatDate(service.collection_date)
+                        : "Collection date not set"}
                     </p>
-
-                    <p className="mt-1 text-xs text-neutral-400">
-
-                      {service.fulfillment_method ===
-                      "delivery"
-                        ? "Delivery"
-                        : "Customer pickup"}
-
+                    <p className="mt-1.5 text-sm font-bold text-red-700">
+                      {service.collection_time
+                        ? formatTime(service.collection_time)
+                        : "Collection time not recorded"}
+                    </p>
+                    <p className="mt-2 inline-flex rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-blue-800">
+                      {service.fulfillment_method === "delivery" ? "Delivery" : "Customer pickup"}
                     </p>
 
                   </div>

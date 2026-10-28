@@ -13,11 +13,12 @@ export default function Home() {
       <section className="w-full max-w-3xl overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white shadow-[0_24px_100px_rgba(7,55,101,0.12)]">
         <div className="h-1.5 bg-gradient-to-r from-blue-700 via-sky-400 to-red-600" />
         <div className="px-6 py-9 sm:px-10 sm:py-12">
-          <div className="mx-auto flex max-w-md items-center justify-center rounded-2xl bg-white px-2">
+          <div className="mx-auto flex max-w-md items-center justify-center rounded-2xl bg-white px-2 py-3">
             <Image
               src="/odancia-logo.png"
               alt="Odancia Laundry"
-              width={454}
+              width={1254}
+              height={462}
               priority
               className="h-auto max-h-36 w-full object-contain"
             />

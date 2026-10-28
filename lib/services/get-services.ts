@@ -26,6 +26,7 @@ export type LaundryService = {
   service_date: string;
   service_time: string | null;
   collection_date: string | null;
+  collection_time: string | null;
 
   client_id: string;
   client_name: string;
@@ -123,6 +124,7 @@ type ServiceRow = {
   service_date: string;
   service_time: string | null;
   collection_date: string | null;
+  collection_time: string | null;
 
   total_price: number | string | null;
   base_price: number | string | null;
@@ -283,6 +285,9 @@ function mapService(
 
     collection_date:
       service.collection_date ?? null,
+
+    collection_time:
+      service.collection_time ?? null,
 
     client_id:
       service.client_id,
@@ -527,6 +532,7 @@ const SERVICE_SELECT = `
   service_date,
   service_time,
   collection_date,
+  collection_time,
   total_price,
   base_price,
   is_express,

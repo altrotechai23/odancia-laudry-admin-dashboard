@@ -30,7 +30,9 @@ export const createServiceSchema = z.object({
     "other",
   ]),
 
-  collectionDate: z.string(),
+  collectionDate: z.string().min(1, "Collection date is required."),
+
+  collectionTime: z.string().min(1, "Collection time is required."),
 
   serviceDate: z.string(),
 

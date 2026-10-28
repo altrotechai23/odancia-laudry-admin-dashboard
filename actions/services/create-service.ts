@@ -35,6 +35,7 @@ export async function createService(
     deposit: formData.get("deposit"),
     paymentMethod: formData.get("paymentMethod"),
     collectionDate: formData.get("collectionDate"),
+    collectionTime: formData.get("collectionTime"),
     serviceDate: formData.get("serviceDate"),
     serviceTime: formData.get("serviceTime"),
     numberOfItems: formData.get("numberOfItems"),
@@ -164,6 +165,7 @@ export async function createService(
         service_date: data.serviceDate,
         service_time: data.serviceTime,
         collection_date: data.collectionDate,
+        collection_time: data.collectionTime,
 
         number_of_items:
           data.numberOfItems || null,
@@ -307,6 +309,7 @@ export async function createService(
 
           collectionDate:
             data.collectionDate,
+          collectionTime: data.collectionTime,
 
           numberOfItems:
             data.numberOfItems ?? null,

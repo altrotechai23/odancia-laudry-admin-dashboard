@@ -184,6 +184,9 @@ export default function NewServiceForm({
   const [collectionDate, setCollectionDate] =
     useState("");
 
+  const [collectionTime, setCollectionTime] =
+    useState("");
+
   const [numberOfItems, setNumberOfItems] =
     useState("");
 
@@ -1090,7 +1093,7 @@ export default function NewServiceForm({
         </div>
 
 
-        <div className="grid gap-5 p-5 sm:grid-cols-3 sm:p-7">
+        <div className="grid gap-5 p-5 sm:grid-cols-2 lg:grid-cols-4 sm:p-7">
           <div>
             <label
               htmlFor="serviceDate"
@@ -1164,6 +1167,29 @@ export default function NewServiceForm({
               className={inputClassName}
               required
             />
+          </div>
+
+          <div>
+            <label
+              htmlFor="collectionTime"
+              className={labelClassName}
+            >
+              Collection time <span className="text-red-600">*</span>
+            </label>
+
+            <div className="relative">
+              <Clock3 className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-red-600" />
+              <input
+                id="collectionTime"
+                name="collectionTime"
+                type="time"
+                value={collectionTime}
+                onChange={(event) => setCollectionTime(event.target.value)}
+                className={`${inputClassName} pl-11 border-red-200 focus:border-red-400 focus:ring-red-500/10`}
+                required
+              />
+            </div>
+            <p className="mt-1.5 text-[11px] font-medium text-red-700">Important: set the customer's promised collection time.</p>
           </div>
         </div>
       </section>

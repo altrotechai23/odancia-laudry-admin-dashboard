@@ -36,6 +36,11 @@ export const adminNavigation: NavigationItem[] = [
     icon: "services",
   },
   {
+    label: "Import from book",
+    href: "/dashboard/services/import",
+    icon: "import",
+  },
+  {
     label: "Clients",
     href: "/dashboard/clients",
     icon: "clients",

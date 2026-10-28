@@ -55,6 +55,7 @@ export async function updateServiceStatus(
       id,
       service_date,
       collection_date,
+      collection_time,
       service_status,
       number_of_items,
       fulfillment_method,
@@ -235,6 +236,9 @@ export async function updateServiceStatus(
 
           collectionDate:
             service.collection_date,
+
+          collectionTime:
+            service.collection_time,
 
           numberOfItems:
             service.number_of_items,
