@@ -12,11 +12,11 @@ export default function LoginPage() {
       </div>
 
       <div className="relative z-10 w-full max-w-md">
-        <div className="mb-6 flex justify-center rounded-3xl border border-white/35 bg-white px-5 py-4 shadow-[0_24px_80px_rgba(0,0,0,0.25)]">
+        <div className="mb-2 flex justify-center rounded-3xl border border-white/35  px-5  shadow-[0_24px_80px_rgba(0,0,0,0.25)]">
           <Image src="/odancia-logo.png" alt="Odancia Laundry" width={1254} height={462} priority className="h-auto max-h-28 w-full object-contain" />
         </div>
 
-        <div className="rounded-[28px] border border-white/70 bg-white p-6 shadow-[0_28px_100px_rgba(0,0,0,0.30)] sm:p-8">
+        <div className="rounded-[28px] border border-white/70 bg-white/60 p-6 shadow-[0_28px_100px_rgba(0,0,0,0.30)] sm:p-8">
           <div className="mb-7">
             <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-blue-800"><span className="h-2 w-2 rounded-full bg-red-600" />Administrator access</div>
             <h1 className="mt-4 text-3xl font-bold tracking-tight text-slate-950">Welcome back</h1>
