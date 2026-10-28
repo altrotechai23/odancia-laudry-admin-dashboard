@@ -22,7 +22,7 @@ export default async function NewClientPage() {
           </Link>
 
           <div className="mt-6 flex items-start gap-4">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-neutral-950 text-white">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-800 text-white">
               <UserPlus className="h-5 w-5" />
             </div>
 

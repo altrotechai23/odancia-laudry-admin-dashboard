@@ -248,7 +248,7 @@ export default async function ServicesPage({
 
             <Link
               href="/dashboard/services/new"
-              className="group inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-neutral-950 px-5 text-sm font-medium text-white shadow-sm transition hover:bg-neutral-800 active:scale-[0.98]"
+              className="group inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-800 px-5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-900 active:scale-[0.98]"
             >
               <Plus className="h-4 w-4" />
 
@@ -482,7 +482,7 @@ export default async function ServicesPage({
                   DESKTOP TABLE
               ================================================== */}
 
-              <div className="hidden overflow-x-auto md:block">
+              <div className="hidden overflow-x-auto xl:block">
 
                 <table className="w-full min-w-[1100px] border-collapse">
 
@@ -549,7 +549,7 @@ export default async function ServicesPage({
                   MOBILE
               ================================================== */}
 
-              <div className="divide-y divide-black/[0.06] md:hidden">
+              <div className="grid gap-3 p-3 sm:grid-cols-2 xl:hidden">
 
                 {services.map(
                   (service) => (
@@ -659,7 +659,7 @@ function FilterLink({
       href={href}
       className={`shrink-0 rounded-xl border px-4 py-2.5 text-xs font-medium transition ${
         active
-          ? "border-neutral-950 bg-neutral-950 text-white"
+          ? "border-neutral-950 bg-blue-800 text-white"
           : "border-black/[0.07] bg-white text-neutral-600 hover:bg-neutral-50"
       }`}
     >
@@ -690,7 +690,7 @@ function QuickStat({
     <div
       className={`rounded-2xl border px-5 py-4 transition ${
         emphasis
-          ? "border-neutral-950 bg-neutral-950 text-white"
+          ? "border-neutral-950 bg-blue-800 text-white"
           : "border-black/[0.06] bg-white"
       }`}
     >
@@ -768,317 +768,131 @@ function TableHeader({
    SERVICE ROW
 ============================================================ */
 
-function ServiceRow({
-  service,
+function ServiceCellLink({
+  href,
+  children,
 }: {
-  service: LaundryService;
+  href: string;
+  children: React.ReactNode;
 }) {
   return (
-    <tr className="group border-b border-black/[0.05] transition hover:bg-neutral-50/70">
+    <Link
+      href={href}
+      className="-mx-5 -my-4 block h-full min-h-full px-5 py-4 outline-none transition focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500 group-hover:text-blue-950"
+    >
+      {children}
+    </Link>
+  );
+}
 
-      <td className="px-5 py-4">
+function paymentMethodLabel(method: string) {
+  switch (method.toLowerCase()) {
+    case "cash": return "Cash";
+    case "eft": return "EFT";
+    case "card": return "Card";
+    default: return "Other";
+  }
+}
 
-        <div>
-
-          <Link
-  href={`/dashboard/services/${service.id}`}
-  className="text-xs font-semibold text-neutral-950 transition hover:underline"
->
-  {service.service_number ??
-    shortServiceId(service.id)}
-</Link>
-
-
-          <p className="mt-1 text-[11px] text-neutral-400">
-
-            {formatDate(
-              service.service_date,
-            )}
-
-            {service.service_time &&
-              ` · ${formatTime(
-                service.service_time,
-              )}`}
-
-          </p>
-
-        </div>
-
-      </td>
-
-
-      <td className="px-5 py-4">
-
-        <div className="flex items-center gap-3">
-
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-neutral-100 text-neutral-500">
-            <UserRound className="h-4 w-4" />
+function ServiceRow({ service }: { service: LaundryService }) {
+  const href = `/dashboard/services/${service.id}`;
+  return (
+    <tr className="group border-b border-black/[0.05] transition-colors hover:bg-blue-50/60 active:bg-blue-50">
+      <td className="px-5 py-4 align-top">
+        <ServiceCellLink href={href}>
+          <div className="font-semibold text-neutral-950">
+            {service.service_number ?? shortServiceId(service.id)}
           </div>
-
-
-          <div className="min-w-0">
-
-            <p className="truncate text-sm font-medium text-neutral-950">
-              {service.client_name}
-            </p>
-
-
-            <p className="mt-0.5 text-[11px] text-neutral-400">
-              {service.phone}
-            </p>
-
+          {service.is_express && <span className="mt-1 inline-flex rounded-full bg-red-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-red-700">Express</span>}
+          <p className="mt-1 text-[11px] text-neutral-400">{formatDate(service.service_date)}{service.service_time ? ` · ${formatTime(service.service_time)}` : ""}</p>
+        </ServiceCellLink>
+      </td>
+      <td className="px-5 py-4 align-top">
+        <ServiceCellLink href={href}>
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-800"><UserRound className="h-4 w-4" /></div>
+            <div className="min-w-0"><p className="truncate text-sm font-medium text-neutral-950">{service.client_name}</p><p className="mt-0.5 text-[11px] text-neutral-400">{service.phone}</p></div>
           </div>
-
-        </div>
-
+        </ServiceCellLink>
       </td>
-
-
-      <td className="px-5 py-4">
-
-        <p className="text-sm text-neutral-700">
-          {service.service_type_name ??
-            "Laundry service"}
-        </p>
-
-
-        {service.number_of_items && (
-          <p className="mt-1 text-[11px] text-neutral-400">
-            {service.number_of_items}{" "}
-            {service.number_of_items === 1
-              ? "item"
-              : "items"}
-          </p>
-        )}
-
+      <td className="px-5 py-4 align-top">
+        <ServiceCellLink href={href}>
+          <p className="text-sm text-neutral-700">{service.service_type_name ?? "Laundry service"}</p>
+          {service.number_of_items && <p className="mt-1 text-[11px] text-neutral-400">{service.number_of_items} {service.number_of_items === 1 ? "item" : "items"}</p>}
+        </ServiceCellLink>
       </td>
-
-
-      <td className="px-5 py-4">
-
-        <p className="text-sm font-medium text-neutral-950">
-          {formatCurrency(
-            service.price,
-          )}
-        </p>
-
-
-        {service.deposit > 0 && (
-          <p className="mt-1 text-[11px] text-neutral-400">
-            Paid{" "}
-            {formatCurrency(
-              service.deposit,
-            )}
-          </p>
-        )}
-
+      <td className="px-5 py-4 align-top">
+        <ServiceCellLink href={href}>
+          <p className="text-sm font-semibold text-neutral-950">{formatCurrency(service.price)}</p>
+          {service.deposit > 0 && <p className="mt-1 text-[11px] text-neutral-400">Deposit {formatCurrency(service.deposit)}</p>}
+        </ServiceCellLink>
       </td>
-
-
-      <td className="px-5 py-4">
-
-        <p
-          className={`text-sm font-semibold ${
-            service.balance > 0
-              ? "text-amber-700"
-              : "text-emerald-600"
-          }`}
-        >
-          {formatCurrency(
-            service.balance,
-          )}
-        </p>
-
-
-        <PaymentBadge
-          status={
-            service.payment_status
-          }
-        />
-
+      <td className="px-5 py-4 align-top">
+        <ServiceCellLink href={href}>
+          <p className={`text-sm font-bold ${service.balance > 0 ? "text-red-700" : "text-emerald-700"}`}>{formatCurrency(service.balance)}</p>
+          <p className="mt-1 text-[10px] font-medium text-neutral-400">{service.payment_status === "paid" ? "Paid" : service.payment_status === "partial" ? "Partially paid" : "Unpaid"}</p>
+          {service.payment_history.length > 0 ? (
+            <div className="mt-2 space-y-1 border-t border-neutral-100 pt-2">
+              {service.payment_history.map((payment) => (
+                <div key={payment.id} className="flex min-w-[150px] items-start justify-between gap-3 text-[10px] leading-4">
+                  <span className="min-w-0"><span className="font-semibold text-blue-800">{paymentMethodLabel(payment.payment_method)}</span>{payment.received_by_name && <span className="block truncate text-neutral-400">By {payment.received_by_name}</span>}</span>
+                  <span className="shrink-0 font-semibold tabular-nums text-neutral-700">{formatCurrency(payment.amount)}</span>
+                </div>
+              ))}
+            </div>
+          ) : <p className="mt-2 border-t border-neutral-100 pt-2 text-[10px] text-neutral-400">No payments yet</p>}
+        </ServiceCellLink>
       </td>
-
-
-      <td className="px-5 py-4">
-
-        <StatusBadge
-          status={
-            service.service_status
-          }
-        />
-
+      <td className="px-5 py-4 align-top"><ServiceCellLink href={href}><StatusBadge status={service.service_status} /></ServiceCellLink></td>
+      <td className="px-5 py-4 align-top">
+        <ServiceCellLink href={href}>
+          <div className="flex items-center gap-2">{service.fulfillment_method === "delivery" ? <Truck className="h-3.5 w-3.5 text-neutral-400" /> : <Package className="h-3.5 w-3.5 text-neutral-400" />}<div><p className="text-xs font-medium text-neutral-700">{service.collection_date ? formatDate(service.collection_date) : "Not set"}</p><p className="mt-0.5 text-[10px] text-neutral-400">{service.fulfillment_method === "delivery" ? "Delivery" : "Pickup"}</p></div></div>
+        </ServiceCellLink>
       </td>
-
-
-      <td className="px-5 py-4">
-
-        <div className="flex items-center gap-2">
-
-          {service.fulfillment_method ===
-          "delivery" ? (
-            <Truck className="h-3.5 w-3.5 text-neutral-400" />
-          ) : (
-            <Package className="h-3.5 w-3.5 text-neutral-400" />
-          )}
-
-
-          <div>
-
-            <p className="text-xs font-medium text-neutral-700">
-              {service.collection_date
-                ? formatDate(
-                    service.collection_date,
-                  )
-                : "Not set"}
-            </p>
-
-
-            <p className="mt-0.5 text-[10px] text-neutral-400">
-              {service.fulfillment_method ===
-              "delivery"
-                ? "Delivery"
-                : "Pickup"}
-            </p>
-
-          </div>
-
-        </div>
-
-      </td>
-
-
-      <td className="px-5 py-4">
-
-        <p className="text-xs text-neutral-600">
-          {service.staff_name ??
-            "—"}
-        </p>
-
-      </td>
-
+      <td className="px-5 py-4 align-top"><ServiceCellLink href={href}><p className="text-xs text-neutral-600">{service.staff_name ?? "—"}</p></ServiceCellLink></td>
     </tr>
   );
 }
 
-
 /* ============================================================
-   MOBILE SERVICE CARD
+   RESPONSIVE SERVICE CARD — the full card is a tablet-friendly link
 ============================================================ */
-
-function ServiceCard({
-  service,
-}: {
-  service: LaundryService;
-}) {
+function ServiceCard({ service }: { service: LaundryService }) {
   return (
-    <div className="p-5">
-
-      <div className="flex items-start justify-between gap-4">
-
-        <div className="flex min-w-0 items-center gap-3">
-
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neutral-100 text-neutral-500">
-            <UserRound className="h-4 w-4" />
-          </div>
-
-
+    <Link
+      href={`/dashboard/services/${service.id}`}
+      aria-label={`Open service ${service.service_number ?? shortServiceId(service.id)} for ${service.client_name}`}
+      className="group block min-h-full rounded-2xl border border-neutral-200/80 bg-white p-4 shadow-sm outline-none transition hover:border-blue-200 hover:shadow-md focus-visible:ring-2 focus-visible:ring-blue-500 active:scale-[0.995] sm:p-5"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-800"><UserRound className="h-5 w-5" /></div>
           <div className="min-w-0">
-
-            <p className="truncate text-sm font-semibold text-neutral-950">
-              {service.client_name}
-            </p>
-
-
-            <p className="mt-0.5 text-xs text-neutral-400">
-              {service.phone}
-            </p>
-
+            <p className="truncate text-xs font-bold text-blue-800">{service.service_number ?? shortServiceId(service.id)}</p>
+            <p className="mt-1 truncate text-sm font-semibold text-neutral-950">{service.client_name}</p>
+            <p className="mt-0.5 truncate text-xs text-neutral-500">{service.phone || "No phone number"}</p>
           </div>
-
         </div>
-
-
-        <StatusBadge
-          status={
-            service.service_status
-          }
-        />
-
+        <StatusBadge status={service.service_status} />
       </div>
-
-
-      <div className="mt-5 grid grid-cols-2 gap-3">
-
-        <MobileDetail
-          label="Service"
-          value={
-            service.service_type_name ??
-            "Laundry"
-          }
-        />
-
-
-        <MobileDetail
-          label="Price"
-          value={formatCurrency(
-            service.price,
-          )}
-        />
-
-
-        <MobileDetail
-          label="Balance"
-          value={formatCurrency(
-            service.balance,
-          )}
-          highlight={
-            service.balance > 0
-          }
-        />
-
-
-        <MobileDetail
-          label="Collection"
-          value={
-            service.collection_date
-              ? formatDate(
-                  service.collection_date,
-                )
-              : "Not set"
-          }
-        />
-
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-[10px] font-medium text-neutral-600">{service.service_type_name ?? "Laundry service"}</span>
+        {service.is_express && <span className="rounded-full bg-red-50 px-2.5 py-1 text-[10px] font-bold text-red-700">Express</span>}
       </div>
-
-
-      <div className="mt-4 flex items-center justify-between border-t border-black/[0.05] pt-4">
-
-        <div className="flex items-center gap-2 text-xs text-neutral-400">
-
-          <CalendarDays className="h-3.5 w-3.5" />
-
-          {formatDate(
-            service.service_date,
-          )}
-
-        </div>
-
-
-        <div className="flex items-center gap-2 text-xs text-neutral-400">
-
-          <UserRound className="h-3.5 w-3.5" />
-
-          {service.staff_name ??
-            "—"}
-
-        </div>
-
+      <div className="mt-4 grid grid-cols-2 gap-2.5">
+        <MobileDetail label="Total" value={formatCurrency(service.price)} />
+        <MobileDetail label="Balance" value={formatCurrency(service.balance)} highlight={service.balance > 0} />
+        <MobileDetail label="Collection" value={service.collection_date ? formatDate(service.collection_date) : "Not set"} />
+        <MobileDetail label="Received by" value={service.staff_name ?? "Not recorded"} />
       </div>
-
-    </div>
+      <div className="mt-3 rounded-xl border border-neutral-100 bg-slate-50/80 p-3">
+        <div className="mb-2 flex items-center justify-between gap-2"><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-neutral-500">Payments so far</p><p className="text-[10px] font-semibold text-neutral-700">{formatCurrency(service.amount_paid)}</p></div>
+        {service.payment_history.length ? <div className="space-y-2">{service.payment_history.map((payment) => <div key={payment.id} className="flex items-center justify-between gap-3 text-xs"><span className="min-w-0"><span className="font-semibold text-blue-800">{paymentMethodLabel(payment.payment_method)}</span><span className="ml-2 text-[10px] text-neutral-500">{payment.received_by_name ?? "Operator not recorded"}</span></span><span className="shrink-0 font-semibold tabular-nums text-neutral-800">{formatCurrency(payment.amount)}</span></div>)}</div> : <p className="text-xs text-neutral-400">No payments recorded yet.</p>}
+      </div>
+      <div className="mt-4 flex items-center justify-between border-t border-neutral-100 pt-3 text-[11px] text-neutral-400"><span className="inline-flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5" />{formatDate(service.service_date)}</span><span className="inline-flex items-center gap-1.5 font-semibold text-blue-800">Open details <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" /></span></div>
+    </Link>
   );
 }
-
 
 /* ============================================================
    MOBILE DETAIL
@@ -1178,9 +992,9 @@ function PaymentBadge({
     },
 
     partial: {
-      label: "Deposit",
+      label: "Partially paid",
       className:
-        "text-amber-600",
+        "text-amber-700",
     },
 
     paid: {
@@ -1241,7 +1055,7 @@ function FilteredEmptyState({
 
       <Link
         href="/dashboard/services"
-        className="mt-5 inline-flex h-10 items-center gap-2 rounded-xl bg-neutral-950 px-4 text-xs font-medium text-white transition hover:bg-neutral-800"
+        className="mt-5 inline-flex h-10 items-center gap-2 rounded-xl bg-blue-800 px-4 text-xs font-medium text-white transition hover:bg-blue-900"
       >
         Clear filters
       </Link>
@@ -1278,7 +1092,7 @@ function EmptyState() {
 
       <Link
         href="/dashboard/services/new"
-        className="mt-5 inline-flex h-10 items-center gap-2 rounded-xl bg-neutral-950 px-4 text-xs font-medium text-white transition hover:bg-neutral-800"
+        className="mt-5 inline-flex h-10 items-center gap-2 rounded-xl bg-blue-800 px-4 text-xs font-medium text-white transition hover:bg-blue-900"
       >
         <Plus className="h-3.5 w-3.5" />
 

@@ -15,7 +15,11 @@ export const createServiceSchema = z.object({
 
   serviceTypeId: z.string().uuid(),
 
+  basePrice: z.coerce.number().min(0),
+
   totalPrice: z.coerce.number().min(0),
+
+  isExpress: z.coerce.boolean().default(false),
 
   deposit: z.coerce.number().min(0),
 

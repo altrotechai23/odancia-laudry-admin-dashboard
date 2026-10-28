@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -25,7 +26,7 @@ export default function DashboardShell({
   const navigation = getNavigationForRole(profile.role);
 
   return (
-    <div className="min-h-screen bg-[#f7f7f5] text-neutral-950">
+    <div className="min-h-screen bg-[#f4f8fc] text-slate-950">
       {mobileOpen && (
         <button
           type="button"
@@ -37,7 +38,7 @@ export default function DashboardShell({
 
       <aside
         className={[
-          "fixed inset-y-0 left-0 z-50 flex flex-col border-r border-black/[0.06] bg-white/90 backdrop-blur-2xl transition-all duration-300",
+          "fixed inset-y-0 left-0 z-50 flex flex-col border-r border-slate-200 border-t-4 border-t-red-600 bg-white/95 backdrop-blur-2xl transition-all duration-300",
           collapsed ? "w-[76px]" : "w-[260px]",
           mobileOpen
             ? "translate-x-0"
@@ -46,23 +47,14 @@ export default function DashboardShell({
       >
         <div className="flex h-20 items-center border-b border-black/[0.06] px-4">
           <Link
-            href="/dashboard/services"
-            className="flex min-w-0 items-center gap-3"
+            href="/dashboard"
+            aria-label="Odancia Laundry dashboard"
+            className="flex min-w-0 items-center justify-center gap-3"
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neutral-950 text-sm font-bold text-white shadow-lg">
-              O
-            </div>
-
-            {!collapsed && (
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold tracking-tight">
-                  Odancia
-                </p>
-
-                <p className="truncate text-[11px] uppercase tracking-[0.16em] text-neutral-400">
-                  Laundry OS
-                </p>
-              </div>
+            {collapsed ? (
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-800 text-lg font-black text-white shadow-md shadow-blue-900/20 ring-2 ring-red-500/15">O</div>
+            ) : (
+              <Image src="/odancia-logo.png" alt="Odancia Laundry" width={1254} height={462} priority className="h-auto max-h-[58px] w-full object-contain" />
             )}
           </Link>
         </div>
@@ -70,7 +62,7 @@ export default function DashboardShell({
         <nav className="flex-1 overflow-y-auto px-3 py-6">
           <p
             className={[
-              "mb-3 px-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-neutral-400",
+              "mb-3 px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-blue-700/70",
               collapsed ? "text-center" : "",
             ].join(" ")}
           >
@@ -95,8 +87,8 @@ export default function DashboardShell({
                       ? "justify-center px-2"
                       : "gap-3 px-3",
                     active
-                      ? "bg-neutral-950 text-white shadow-sm"
-                      : "text-neutral-500 hover:bg-neutral-100 hover:text-neutral-950",
+                      ? "bg-blue-50 text-blue-900 shadow-sm ring-1 ring-blue-100 border-l-[3px] border-l-red-600"
+                      : "border-l-[3px] border-l-transparent text-neutral-500 hover:bg-red-50/60 hover:text-blue-900",
                   ].join(" ")}
                 >
                   <NavigationIcon
@@ -118,11 +110,11 @@ export default function DashboardShell({
         <div className="border-t border-black/[0.06] p-3">
           <div
             className={[
-              "mb-2 flex items-center rounded-xl bg-neutral-50 p-2",
+              "mb-2 flex items-center rounded-xl bg-slate-50 p-2 ring-1 ring-slate-100",
               collapsed ? "justify-center" : "gap-3",
             ].join(" ")}
           >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-neutral-900 text-xs font-semibold text-white">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-800 text-xs font-semibold text-white ring-2 ring-red-500/10">
               {getInitials(profile.full_name)}
             </div>
 
@@ -164,7 +156,7 @@ export default function DashboardShell({
           collapsed ? "lg:pl-[76px]" : "lg:pl-[260px]",
         ].join(" ")}
       >
-        <header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b border-black/[0.06] bg-[#f7f7f5]/80 px-4 backdrop-blur-xl sm:px-6 lg:px-8">
+        <header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b border-slate-200/80 bg-[#f4f8fc]/85 px-4 backdrop-blur-xl sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -189,24 +181,22 @@ export default function DashboardShell({
             </button>
 
             <div className="hidden sm:block">
-              <p className="text-xs uppercase tracking-[0.16em] text-neutral-400">
-                {profile.role === "staff"
-                  ? "Staff workspace"
-                  : "Business workspace"}
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-red-600">
+                Administrator workspace
               </p>
 
-              <p className="mt-0.5 text-sm font-medium">
+              <p className="mt-0.5 text-sm font-semibold text-blue-950">
                 Odancia Laundry
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="hidden rounded-full border border-black/[0.06] bg-white px-3 py-2 text-xs text-neutral-500 sm:block">
+            <div className="hidden rounded-full border border-blue-100 bg-white px-3 py-2 text-xs font-medium text-blue-900 sm:block">
               ZAR · South Africa
             </div>
 
-            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-black/[0.06] bg-white text-xs font-semibold">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-blue-100 bg-white text-xs font-bold text-blue-800 ring-2 ring-red-500/10">
               {getInitials(profile.full_name)}
             </div>
           </div>
@@ -263,6 +253,15 @@ function NavigationIcon({
       <svg {...common}>
         <path d="M5 4h14v16H5z" />
         <path d="M8 8h8M8 12h8M8 16h5" />
+      </svg>
+    );
+  }
+
+  if (type === "shift") {
+    return (
+      <svg {...common}>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 7v5l3 2" />
       </svg>
     );
   }

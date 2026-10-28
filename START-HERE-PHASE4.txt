@@ -1,0 +1,29 @@
+ODANCIA LAUNDRY — PHASE 4 (SIMPLIFIED)
+
+This is the existing Next.js/Supabase application with a simpler staff workflow and red/blue branding using the supplied Odancia Laundry logo.
+
+IMPORTANT — DATABASE SETUP
+1. Back up the Supabase project first.
+2. Open supabase/migrations/202610280001_admin_session_staff_passcodes.sql.
+3. Paste the complete file into Supabase SQL Editor and run it as ONE query.
+4. Do not run any fragment starting with CASE or RETURNS jsonb; those lines belong inside a complete PL/pgSQL function.
+5. Confirm the migration's final verification result lists OK for every object.
+
+WORKFLOW
+- Only active owner/admin accounts can log in.
+- Staff do not log in. Admins manage each staff member's check-in/out.
+- Each staff member has a unique four-digit code.
+- The code is requested for service creation, status changes, and payments, but not for reading/viewing.
+- The staff member must be active and clocked in.
+- Existing customer/service/payment records are not intentionally deleted or rewritten.
+
+ENVIRONMENT
+Keep the existing .env.local. Required server-only secret: SUPABASE_SERVICE_ROLE_KEY. Never place it in a NEXT_PUBLIC_ variable or commit/share the .env.local file.
+
+TEST
+npm ci
+npm run lint
+npm run build
+npm run dev
+
+Test in staging before production. Build verification status is documented in PHASE4-STATUS.md.

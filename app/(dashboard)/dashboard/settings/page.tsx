@@ -100,7 +100,7 @@ export default async function SettingsPage() {
         <section className="mt-7 overflow-hidden rounded-3xl border border-black/[0.06] bg-white shadow-[0_8px_40px_rgba(0,0,0,0.03)]">
           <div className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
             <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-neutral-950 text-white">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-800 text-white">
                 <CircleUserRound className="h-5 w-5" />
               </div>
 
@@ -150,7 +150,7 @@ export default async function SettingsPage() {
         <section className="mt-5 rounded-3xl border border-black/[0.06] bg-white shadow-[0_8px_40px_rgba(0,0,0,0.03)]">
           <div className="border-b border-black/[0.06] px-5 py-5 sm:px-6">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-neutral-950 text-white">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-800 text-white">
                 <Store className="h-4 w-4" />
               </div>
 
@@ -211,7 +211,7 @@ function SettingsCard({
       href={section.href}
       className="group flex items-center gap-4 rounded-2xl border border-black/[0.06] bg-white p-4 shadow-[0_6px_30px_rgba(0,0,0,0.025)] transition duration-200 hover:-translate-y-[1px] hover:border-black/[0.09] hover:bg-neutral-50/70 hover:shadow-[0_10px_35px_rgba(0,0,0,0.045)] sm:p-5"
     >
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neutral-950 text-white transition group-hover:scale-[1.02]">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-800 text-white transition group-hover:scale-[1.02]">
         {section.icon}
       </div>
 

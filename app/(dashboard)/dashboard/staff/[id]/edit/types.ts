@@ -1,9 +1,4 @@
-// app/(dashboard)/dashboard/staff/[id]/edit/types.ts
-
-export type UpdateStaffRole =
-  | "staff"
-  | "admin"
-  | "owner";
+export type UpdateStaffRole = "staff" | "admin" | "owner";
 
 export type UpdateStaffState = {
   success: boolean;
@@ -17,7 +12,9 @@ export type StaffProfile = {
   role: UpdateStaffRole;
   avatar_url: string | null;
   is_active: boolean;
-  email: string;
+  address: string | null;
+  contact_email: string | null;
+  email?: string | null;
 };
 
 export const initialUpdateStaffState: UpdateStaffState = {

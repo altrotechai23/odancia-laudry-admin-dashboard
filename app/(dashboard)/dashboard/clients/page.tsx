@@ -71,7 +71,7 @@ export default async function ClientsPage({
 
             <Link
               href="/dashboard/clients/new"
-              className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-neutral-950 px-4 text-xs font-semibold text-white transition hover:bg-neutral-800"
+              className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-800 px-4 text-xs font-semibold text-white transition hover:bg-blue-900"
             >
               <Plus className="h-3.5 w-3.5" />
               Add client
@@ -290,7 +290,7 @@ function SummaryCard({
   return (
     <div className="rounded-2xl border border-black/[0.06] bg-white p-4 shadow-[0_6px_30px_rgba(0,0,0,0.025)]">
       <div className="flex items-start justify-between gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-neutral-950 text-white">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-800 text-white">
           {icon}
         </div>
 
@@ -496,7 +496,7 @@ function EmptyState({
       ) : (
         <Link
           href="/dashboard/clients/new"
-          className="mt-5 inline-flex h-10 items-center gap-2 rounded-xl bg-neutral-950 px-4 text-xs font-semibold text-white transition hover:bg-neutral-800"
+          className="mt-5 inline-flex h-10 items-center gap-2 rounded-xl bg-blue-800 px-4 text-xs font-semibold text-white transition hover:bg-blue-900"
         >
           <Plus className="h-3.5 w-3.5" />
           Add client

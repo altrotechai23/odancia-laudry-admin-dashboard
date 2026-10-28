@@ -56,7 +56,7 @@ export async function getCurrentUserProfile(): Promise<CurrentUserProfile | null
 export async function requireUser() {
   const profile = await getCurrentUserProfile();
 
-  if (!profile || !profile.is_active) {
+  if (!profile || !profile.is_active || (profile.role !== "owner" && profile.role !== "admin")) {
     redirect("/login");
   }
 

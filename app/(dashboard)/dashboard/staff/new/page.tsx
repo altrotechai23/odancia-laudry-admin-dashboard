@@ -28,7 +28,7 @@ export default async function NewStaffPage() {
 
         <header className="mt-7">
           <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-neutral-950 text-white shadow-sm">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-800 text-white shadow-sm">
               <UserPlus className="h-5 w-5" />
             </div>
 
@@ -46,9 +46,7 @@ export default async function NewStaffPage() {
               </h1>
 
               <p className="mt-2 max-w-xl text-sm leading-6 text-neutral-500">
-                Create a new account and give the
-                team member access to the
-                administration system.
+                Add a team member record and issue their unique 4-digit service authorization code. Staff do not log in to the dashboard.
               </p>
             </div>
           </div>
@@ -68,14 +66,11 @@ export default async function NewStaffPage() {
 
             <div>
               <p className="text-xs font-semibold text-neutral-900">
-                Account security
+                Service authorization
               </p>
 
               <p className="mt-1 text-[11px] leading-5 text-neutral-500">
-                New accounts are created securely
-                through Supabase Authentication.
-                Passwords are never stored in the
-                profiles table.
+                Only owner/admin accounts can sign in. Staff passcodes are used solely to authorize service changes and payments, and only while that staff member is clocked in.
               </p>
             </div>
           </div>
@@ -93,17 +88,9 @@ export default async function NewStaffPage() {
               </p>
 
               <p className="mt-1 text-[11px] leading-5 text-neutral-500">
-                You are creating this account as{" "}
-                <span className="font-semibold text-neutral-700">
-                  {currentUser.role}
-                </span>
-                .
-
-                {currentUser.role === "admin" &&
-                  " Administrators can create staff and admin accounts, but cannot create owner accounts."}
-
-                {currentUser.role === "owner" &&
-                  " Owners can create staff, admin, and owner accounts."}
+                You are signed in as{" "}
+                <span className="font-semibold text-neutral-700">{currentUser.role}</span>.
+                {" Staff are attendance and service-authorization records, not dashboard users."}
               </p>
             </div>
           </div>

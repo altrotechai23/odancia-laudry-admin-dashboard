@@ -1,0 +1,18 @@
+ODANCIA LAUNDRY — PHASE 3
+==========================
+
+1. Keep the original project and a verified Supabase backup.
+2. The four services columns were confirmed present in your current database. Do not add them again manually.
+3. Open supabase/migrations/202610270003_staff_passcodes_shifts_barcode_gate.sql and run the COMPLETE file in Supabase SQL Editor. Do not run a fragment beginning with RETURNS jsonb. The final query should return thirteen rows marked OK.
+4. Test the migration on a staging Supabase project before production. This migration is additive to business data, but it does change RLS policies and the payment RPC.
+5. Ensure .env.local has NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, and SUPABASE_SERVICE_ROLE_KEY. Never expose the service-role key to the browser or commit it. Keep this key stable after issuing staff passcodes.
+6. In the project folder run npm ci, npm run lint, npm run build, and then npm run dev.
+7. Test owner/admin sign-in, staff creation, passcode sign-in, barcode copy/rotation, clock-in/out, service creation with a staff barcode, status update, and mixed-method payment batches.
+
+NOTES
+-----
+- Existing customers, services, payments, audit logs and settings are not deleted by the Phase 3 migration.
+- Staff passcodes are 8–12 digits and must be unique across staff accounts. Existing staff accounts need a passcode set through Staff > Edit before they can use passcode-only login.
+- The personal barcode value is shown once after creation or rotation; save it. Only its hash is stored. The current UI accepts barcode-scanner keyboard input or manual entry; a printable barcode label graphic is not yet included.
+- Keep RLS enabled. Do not use the service-role key in client components.
+- A complete Next.js production build was not verified in the preparation environment because dependency installation timed out. Run the checks above locally before deployment.

@@ -1,7 +1,8 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { requireUser } from "@/lib/auth/get-current-user";
+import { requireOwnerOrAdmin } from "@/lib/auth/get-current-user";
+import { authorizeStaffWrite, clearStaffWriteAuthorization, logStaffServiceOperation } from "@/lib/staff/security";
 
 import {
   sendReadyForCollectionSms,
@@ -14,158 +15,175 @@ export type NotifyServiceReadyResult = {
 
 export async function notifyServiceReady(
   serviceId: string,
+  passcode = "",
 ): Promise<NotifyServiceReadyResult> {
-  await requireUser();
+  await requireOwnerOrAdmin();
+  const authorization = await authorizeStaffWrite(passcode);
+  if (!authorization.success) {
+    return { success: false, message: authorization.message ?? "Staff passcode verification failed." };
+  }
 
-  const supabase =
-    await createClient();
+  try {
+    const supabase =
+      await createClient();
 
-  const {
-    data: service,
-    error,
-  } = await supabase
-    .from("services")
-    .select(
-      `
-        id,
-        collection_date,
-        number_of_items,
-        fulfillment_method,
-        total_price,
-        clients (
-          full_name,
-          phone
-        ),
-        service_types (
-          name,
-          description
-        )
-      `,
-    )
-    .eq(
-      "id",
-      serviceId,
-    )
-    .single();
-
-  if (error || !service) {
-    console.error(
-      "READY SMS SERVICE LOAD FAILED:",
+    const {
+      data: service,
       error,
-    );
+    } = await supabase
+      .from("services")
+      .select(
+        `
+          id,
+          collection_date,
+          number_of_items,
+          fulfillment_method,
+          total_price,
+          clients (
+            full_name,
+            phone
+          ),
+          service_types (
+            name,
+            description
+          )
+        `,
+      )
+      .eq(
+        "id",
+        serviceId,
+      )
+      .single();
 
-    return {
-      success: false,
-      message:
-        "Unable to load service.",
-    };
-  }
+    if (error || !service) {
+      console.error(
+        "READY SMS SERVICE LOAD FAILED:",
+        error,
+      );
 
-  const client =
-    Array.isArray(service.clients)
-      ? service.clients[0]
-      : service.clients;
+      return {
+        success: false,
+        message:
+          "Unable to load service.",
+      };
+    }
 
-  const serviceType =
-    Array.isArray(
-      service.service_types,
-    )
-      ? service.service_types[0]
-      : service.service_types;
+    const client =
+      Array.isArray(service.clients)
+        ? service.clients[0]
+        : service.clients;
 
-  if (!client?.phone) {
-    return {
-      success: false,
-      message:
-        "Customer has no phone number.",
-    };
-  }
+    const serviceType =
+      Array.isArray(
+        service.service_types,
+      )
+        ? service.service_types[0]
+        : service.service_types;
 
-  // --------------------------------------------------
-  // CALCULATE PAYMENTS
-  // --------------------------------------------------
+    if (!client?.phone) {
+      return {
+        success: false,
+        message:
+          "Customer has no phone number.",
+      };
+    }
 
-  const {
-    data: payments,
-  } = await supabase
-    .from("payments")
-    .select("amount")
-    .eq(
-      "service_id",
-      service.id,
-    );
+    // --------------------------------------------------
+    // CALCULATE PAYMENTS
+    // --------------------------------------------------
 
-  const amountPaid =
-    (payments ?? []).reduce(
-      (total, payment) =>
-        total +
-        Number(payment.amount || 0),
-      0,
-    );
-
-  const totalPrice =
-    Number(
-      service.total_price || 0,
-    );
-
-  const balance =
-    Math.max(
-      totalPrice -
-        amountPaid,
-      0,
-    );
-
-  // --------------------------------------------------
-  // SEND SMS
-  // --------------------------------------------------
-
-  const result =
-    await sendReadyForCollectionSms({
-      customerName:
-        client.full_name,
-
-      phone:
-        client.phone,
-
-      serviceName:
-        serviceType?.name ??
-        "Laundry Service",
-
-      serviceDescription:
-        serviceType?.description ??
-        null,
-
-      serviceId:
+    const {
+      data: payments,
+    } = await supabase
+      .from("payments")
+      .select("amount")
+      .eq(
+        "service_id",
         service.id,
+      );
 
-      collectionDate:
-        service.collection_date,
+    const amountPaid =
+      (payments ?? []).reduce(
+        (total, payment) =>
+          total +
+          Number(payment.amount || 0),
+        0,
+      );
 
-      numberOfItems:
-        service.number_of_items,
+    const totalPrice =
+      Number(
+        service.total_price || 0,
+      );
 
-      fulfillmentMethod:
-        service.fulfillment_method,
+    const balance =
+      Math.max(
+        totalPrice -
+          amountPaid,
+        0,
+      );
 
-      totalPrice,
+    // --------------------------------------------------
+    // SEND SMS
+    // --------------------------------------------------
 
-      amountPaid,
+    const result =
+      await sendReadyForCollectionSms({
+        customerName:
+          client.full_name,
 
-      balance,
+        phone:
+          client.phone,
+
+        serviceName:
+          serviceType?.name ??
+          "Laundry Service",
+
+        serviceDescription:
+          serviceType?.description ??
+          null,
+
+        serviceId:
+          service.id,
+
+        collectionDate:
+          service.collection_date,
+
+        numberOfItems:
+          service.number_of_items,
+
+        fulfillmentMethod:
+          service.fulfillment_method,
+
+        totalPrice,
+
+        amountPaid,
+
+        balance,
+      });
+
+    if (!result.success) {
+      return {
+        success: false,
+        message:
+          result.error ??
+          "Unable to send SMS.",
+      };
+    }
+
+    await logStaffServiceOperation({
+      staffId: authorization.staffId,
+      staffName: authorization.staffName,
+      serviceId: service.id,
+      action: authorization.actorRole === "staff" ? "STAFF_SEND_READY_NOTIFICATION" : "ADMIN_SEND_READY_NOTIFICATION",
+      oldData: null,
+      newData: { notification_sent: true },
     });
-
-  if (!result.success) {
     return {
-      success: false,
+      success: true,
       message:
-        result.error ??
-        "Unable to send SMS.",
+        "Customer has been notified.",
     };
+  } finally {
+    await clearStaffWriteAuthorization(authorization.authorizationId);
   }
-
-  return {
-    success: true,
-    message:
-      "Customer has been notified.",
-  };
 }

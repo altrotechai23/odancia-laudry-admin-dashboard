@@ -62,7 +62,7 @@ export default async function BusinessSettingsPage() {
 
         <header className="mt-6">
           <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-neutral-950 text-white">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-800 text-white">
               <Building2 className="h-5 w-5" />
             </div>
 
@@ -102,7 +102,7 @@ export default async function BusinessSettingsPage() {
           <section className="overflow-hidden rounded-3xl border border-black/[0.06] bg-white shadow-[0_8px_40px_rgba(0,0,0,0.03)]">
             <div className="border-b border-black/[0.06] px-5 py-5 sm:px-6">
               <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-neutral-950 text-white">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-800 text-white">
                   <Store className="h-4 w-4" />
                 </div>
 
@@ -171,7 +171,7 @@ export default async function BusinessSettingsPage() {
           <section className="overflow-hidden rounded-3xl border border-black/[0.06] bg-white shadow-[0_8px_40px_rgba(0,0,0,0.03)]">
             <div className="border-b border-black/[0.06] px-5 py-5 sm:px-6">
               <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-neutral-950 text-white">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-800 text-white">
                   <MapPin className="h-4 w-4" />
                 </div>
 
@@ -240,7 +240,7 @@ export default async function BusinessSettingsPage() {
 
               <button
                 type="submit"
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-neutral-950 px-5 text-xs font-semibold text-white transition hover:bg-neutral-800 active:scale-[0.99]"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-blue-800 px-5 text-xs font-semibold text-white transition hover:bg-blue-900 active:scale-[0.99]"
               >
                 <Save className="h-3.5 w-3.5" />
                 Save changes

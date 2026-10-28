@@ -12,47 +12,23 @@ export async function login(
   _previousState: LoginState,
   formData: FormData,
 ): Promise<LoginState> {
-  const email = String(formData.get("email") ?? "")
-    .trim()
-    .toLowerCase();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const password = String(formData.get("password") ?? "");
 
-  const password = String(formData.get("password") ?? "").trim();
-
-  if (!email) {
-    return {
-      error: "Enter your email address.",
-    };
-  }
-
-  if (!password) {
-    return {
-      error: "Enter your password.",
-    };
-  }
+  if (!email) return { error: "Enter your email address." };
+  if (!password) return { error: "Enter your password." };
 
   const supabase = await createClient();
-
-  const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) {
-    console.error("Login error:", error.message);
-
-    return {
-      error: "Invalid email address or password.",
-    };
+    console.warn("Administrator login failed.", error.message);
+    return { error: "Invalid email address or password." };
   }
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
-    return {
-      error: "Unable to establish your session.",
-    };
+    await supabase.auth.signOut();
+    return { error: "Unable to establish your session." };
   }
 
   const { data: profile, error: profileError } = await supabase
@@ -63,24 +39,15 @@ export async function login(
 
   if (profileError || !profile) {
     await supabase.auth.signOut();
-
-    return {
-      error:
-        "Your account profile could not be found. Contact the owner.",
-    };
+    return { error: "Your account profile could not be found. Contact the system administrator." };
   }
-
   if (!profile.is_active) {
     await supabase.auth.signOut();
-
-    return {
-      error:
-        "Your account is inactive. Contact the owner.",
-    };
+    return { error: "Your account is inactive. Contact the system administrator." };
   }
-
-  if (profile.role === "staff") {
-    redirect("/dashboard/services");
+  if (profile.role !== "owner" && profile.role !== "admin") {
+    await supabase.auth.signOut();
+    return { error: "Only administrator accounts can sign in. Staff records do not have dashboard login access." };
   }
 
   redirect("/dashboard");

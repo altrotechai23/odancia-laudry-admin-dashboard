@@ -8,6 +8,11 @@ export type NavigationItem = {
 
 export const staffNavigation: NavigationItem[] = [
   {
+    label: "Manage Attendance",
+    href: "/dashboard/shift",
+    icon: "shift",
+  },
+  {
     label: "Services",
     href: "/dashboard/services",
     icon: "services",
@@ -19,6 +24,11 @@ export const adminNavigation: NavigationItem[] = [
     label: "Overview",
     href: "/dashboard",
     icon: "overview",
+  },
+  {
+    label: "Manage Attendance",
+    href: "/dashboard/shift",
+    icon: "shift",
   },
   {
     label: "Services",

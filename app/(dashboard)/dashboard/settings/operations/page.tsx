@@ -82,7 +82,7 @@ export default async function OperationsSettingsPage() {
         <header className="mt-6">
           <div className="flex items-start gap-4">
 
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-neutral-950 text-white">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-800 text-white">
               <Settings2 className="h-5 w-5" />
             </div>
 
@@ -345,7 +345,7 @@ export default async function OperationsSettingsPage() {
 
               <button
                 type="submit"
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-neutral-950 px-5 text-xs font-semibold text-white transition hover:bg-neutral-800 active:scale-[0.99]"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-blue-800 px-5 text-xs font-semibold text-white transition hover:bg-blue-900 active:scale-[0.99]"
               >
                 <Save className="h-3.5 w-3.5" />
                 Save changes
@@ -673,7 +673,7 @@ function SectionHeader({
     <div className="border-b border-black/[0.06] px-5 py-5 sm:px-6">
       <div className="flex items-center gap-3">
 
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-neutral-950 text-white">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-800 text-white">
           {icon}
         </div>
 
@@ -863,7 +863,7 @@ function ToggleRow({
           className="peer sr-only"
         />
 
-        <div className="h-6 w-11 rounded-full bg-neutral-200 transition peer-checked:bg-neutral-950 peer-focus-visible:ring-2 peer-focus-visible:ring-neutral-300" />
+        <div className="h-6 w-11 rounded-full bg-neutral-200 transition peer-checked:bg-blue-800 peer-focus-visible:ring-2 peer-focus-visible:ring-neutral-300" />
 
         <div className="absolute left-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-white shadow-sm transition peer-checked:translate-x-5">
 

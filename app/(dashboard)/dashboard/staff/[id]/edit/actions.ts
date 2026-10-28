@@ -1,410 +1,177 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-
-import { createClient } from "@/lib/supabase/server";
+import { requireOwnerOrAdmin } from "@/lib/auth/get-current-user";
 import { createAdminClient } from "@/lib/supabase/admin";
-
-import type {
-  UpdateStaffRole,
-  UpdateStaffState,
-} from "./types";
-
-/* ============================================================
-   UPDATE STAFF
-   ============================================================
-
-   IMPORTANT:
-
-   This is intentionally a direct async server action.
-
-   Do NOT create a function such as:
-
-   createUpdateStaffAction(staffId)
-
-   inside a "use server" module.
-
-   Next.js 16 requires exported server actions to themselves
-   be async functions.
-============================================================ */
+import { hashStaffPasscode } from "@/lib/staff/security";
+import type { UpdateStaffState } from "./types";
 
 export async function updateStaff(
   staffId: string,
   _previousState: UpdateStaffState,
   formData: FormData,
 ): Promise<UpdateStaffState> {
-  /* ----------------------------------------------------------
-     VERIFY CURRENT USER
-  ---------------------------------------------------------- */
+  const actor = await requireOwnerOrAdmin();
+  if (!staffId) return { success: false, message: "Staff member could not be identified." };
 
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    return {
-      success: false,
-      message:
-        "You must be logged in to update staff accounts.",
-    };
-  }
-
-  /* ----------------------------------------------------------
-     VERIFY CURRENT USER PROFILE
-  ---------------------------------------------------------- */
-
-  const {
-    data: currentProfile,
-    error: profileError,
-  } = await supabase
+  const admin = createAdminClient();
+  const { data: existing, error: existingError } = await admin
     .from("profiles")
-    .select(
-      "id, full_name, role, is_active",
-    )
-    .eq("id", user.id)
-    .single();
-
-  if (profileError || !currentProfile) {
-    console.error(
-      "CURRENT PROFILE VERIFICATION FAILED:",
-      profileError,
-    );
-
-    return {
-      success: false,
-      message:
-        "Your profile could not be verified.",
-    };
-  }
-
-  /* ----------------------------------------------------------
-     AUTHORIZATION
-  ---------------------------------------------------------- */
-
-  if (
-    currentProfile.role !== "owner" &&
-    currentProfile.role !== "admin"
-  ) {
-    return {
-      success: false,
-      message:
-        "Only owners and administrators can update staff accounts.",
-    };
-  }
-
-  if (!currentProfile.is_active) {
-    return {
-      success: false,
-      message:
-        "Your account is inactive.",
-    };
-  }
-
-  /* ----------------------------------------------------------
-     VALIDATE STAFF ID
-  ---------------------------------------------------------- */
-
-  if (!staffId || typeof staffId !== "string") {
-    return {
-      success: false,
-      message:
-        "Staff member could not be identified.",
-    };
-  }
-
-  /* ----------------------------------------------------------
-     GET EXISTING STAFF PROFILE
-  ---------------------------------------------------------- */
-
-  const {
-    data: existingProfile,
-    error: existingProfileError,
-  } = await supabase
-    .from("profiles")
-    .select(
-      `
-        id,
-        full_name,
-        phone,
-        role,
-        avatar_url,
-        is_active
-      `,
-    )
+    .select("id, full_name, phone, address, contact_email, role, is_active")
     .eq("id", staffId)
     .maybeSingle();
 
-  if (
-    existingProfileError ||
-    !existingProfile
-  ) {
-    console.error(
-      "STAFF PROFILE LOAD FAILED:",
-      existingProfileError,
-    );
-
-    return {
-      success: false,
-      message:
-        "Staff member could not be found.",
-    };
+  if (existingError || !existing) {
+    console.error("STAFF PROFILE LOAD FAILED", existingError?.message);
+    return { success: false, message: "Staff member could not be found." };
+  }
+  if (existing.role === "owner" && actor.role !== "owner") {
+    return { success: false, message: "Administrators cannot modify an owner account." };
   }
 
-  /* ----------------------------------------------------------
-     PROTECT OWNER ACCOUNTS FROM ADMINS
-  ---------------------------------------------------------- */
+  const fullName = String(formData.get("full_name") ?? "").trim();
+  const phone = String(formData.get("phone") ?? "").trim();
+  const address = String(formData.get("address") ?? "").trim();
+  const contactEmail = String(formData.get("contact_email") ?? "").trim().toLowerCase();
+  const newPasscode = String(formData.get("new_passcode") ?? "").trim();
+  const isActive = formData.get("is_active") === "on";
 
-  if (
-    existingProfile.role === "owner" &&
-    currentProfile.role !== "owner"
-  ) {
-    return {
-      success: false,
-      message:
-        "Administrators cannot modify owner accounts.",
-    };
+  if (fullName.length < 2 || fullName.length > 120) {
+    return { success: false, message: "Full name must contain 2–120 characters." };
+  }
+  if (phone && (phone.length < 7 || phone.length > 30)) {
+    return { success: false, message: "Enter a valid phone number." };
+  }
+  if (address.length > 300) return { success: false, message: "Address must be 300 characters or less." };
+  if (contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) {
+    return { success: false, message: "Please enter a valid contact email address." };
+  }
+  if (staffId === actor.id && !isActive) {
+    return { success: false, message: "You cannot deactivate your own administrator account." };
+  }
+  if (newPasscode && existing.role !== "staff") {
+    return { success: false, message: "Only a staff profile can have a service passcode." };
+  }
+  if (newPasscode && !/^\d{4}$/.test(newPasscode)) {
+    return { success: false, message: "A staff passcode must contain exactly 4 digits." };
+  }
+  if (newPasscode === "0000") {
+    return { success: false, message: "0000 is reserved for the currently logged-in administrator. Choose a different staff passcode." };
   }
 
-  /* ----------------------------------------------------------
-     READ FORM DATA
-  ---------------------------------------------------------- */
+  let oldCredential: { staff_id: string; login_email: string; passcode_lookup_hash: string; updated_at?: string } | null = null;
+  let wrotePasscode = false;
+  if (newPasscode) {
+    let newHash: string;
+    try {
+      newHash = hashStaffPasscode(newPasscode);
+    } catch (error) {
+      console.error("STAFF PASSCODE HASH FAILED", error);
+      return { success: false, message: "Staff passcode security is not configured on the server." };
+    }
 
-  const fullName = String(
-    formData.get("full_name") ?? "",
-  ).trim();
+    const { data: duplicate, error: duplicateError } = await admin
+      .from("staff_passcode_credentials")
+      .select("staff_id")
+      .eq("passcode_lookup_hash", newHash)
+      .maybeSingle();
+    if (duplicateError) {
+      console.error("STAFF PASSCODE DUPLICATE LOOKUP FAILED", duplicateError.message);
+      return { success: false, message: "Unable to verify this passcode. Check the staff migration and try again." };
+    }
+    if (duplicate && duplicate.staff_id !== staffId) {
+      return { success: false, message: "That 4-digit code is already assigned. Choose a different code." };
+    }
 
-  const phone = String(
-    formData.get("phone") ?? "",
-  ).trim();
+    const { data: currentCredential, error: credentialError } = await admin
+      .from("staff_passcode_credentials")
+      .select("staff_id, login_email, passcode_lookup_hash, updated_at")
+      .eq("staff_id", staffId)
+      .maybeSingle();
+    if (credentialError) {
+      console.error("STAFF PASSCODE CREDENTIAL LOAD FAILED", credentialError.message);
+      return { success: false, message: "Unable to load the staff passcode record." };
+    }
+    oldCredential = currentCredential;
 
-  const requestedRole =
-    String(
-      formData.get("role") ??
-        existingProfile.role,
-    ) as UpdateStaffRole;
+    let loginEmail = currentCredential?.login_email;
+    if (!loginEmail) {
+      const { data: authData, error: authError } = await admin.auth.admin.getUserById(staffId);
+      if (authError || !authData.user?.email) {
+        return { success: false, message: "The staff record cannot be linked to its internal account. No changes were saved." };
+      }
+      loginEmail = authData.user.email;
+    }
 
-  /*
-   * Checkbox behavior:
-   *
-   * checked   -> "on"
-   * unchecked -> null
-   */
-  const isActive =
-    formData.get("is_active") === "on";
-
-  /* ----------------------------------------------------------
-     VALIDATE NAME
-  ---------------------------------------------------------- */
-
-  if (!fullName) {
-    return {
-      success: false,
-      message:
-        "Please enter the staff member's full name.",
-    };
+    const { error: upsertError } = await admin.from("staff_passcode_credentials").upsert({
+      staff_id: staffId,
+      login_email: loginEmail,
+      passcode_lookup_hash: newHash,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "staff_id" });
+    if (upsertError) {
+      console.error("STAFF PASSCODE RESET FAILED", upsertError.message);
+      return { success: false, message: "Unable to set the new staff passcode." };
+    }
+    wrotePasscode = true;
   }
 
-  if (fullName.length < 2) {
-    return {
-      success: false,
-      message:
-        "Full name must contain at least 2 characters.",
-    };
+  const { error: updateError } = await admin.from("profiles").update({
+    full_name: fullName,
+    phone: phone || null,
+    address: address || null,
+    contact_email: contactEmail || null,
+    is_active: isActive,
+    updated_at: new Date().toISOString(),
+  }).eq("id", staffId);
+
+  if (updateError) {
+    console.error("STAFF PROFILE UPDATE FAILED", updateError.message);
+    if (wrotePasscode) {
+      if (oldCredential) {
+        const { error } = await admin.from("staff_passcode_credentials").upsert(oldCredential, { onConflict: "staff_id" });
+        if (error) console.error("PASSCODE ROLLBACK FAILED", error.message);
+      } else {
+        const { error } = await admin.from("staff_passcode_credentials").delete().eq("staff_id", staffId);
+        if (error) console.error("PASSCODE ROLLBACK FAILED", error.message);
+      }
+    }
+    return { success: false, message: `Unable to update the profile: ${updateError.message}` };
   }
 
-  if (fullName.length > 120) {
-    return {
-      success: false,
-      message:
-        "Full name must be 120 characters or less.",
-    };
-  }
-
-  /* ----------------------------------------------------------
-     VALIDATE ROLE
-  ---------------------------------------------------------- */
-
-  if (
-    requestedRole !== "staff" &&
-    requestedRole !== "admin" &&
-    requestedRole !== "owner"
-  ) {
-    return {
-      success: false,
-      message:
-        "Invalid staff role.",
-    };
-  }
-
-  /* ----------------------------------------------------------
-     OWNER ROLE PROTECTION
-  ---------------------------------------------------------- */
-
-  if (
-    requestedRole === "owner" &&
-    currentProfile.role !== "owner"
-  ) {
-    return {
-      success: false,
-      message:
-        "Only the owner can assign the owner role.",
-    };
-  }
-
-  /* ----------------------------------------------------------
-     ADMIN PROTECTION
-  ---------------------------------------------------------- */
-
-  if (
-    currentProfile.role === "admin" &&
-    requestedRole === "owner"
-  ) {
-    return {
-      success: false,
-      message:
-        "Administrators cannot assign the owner role.",
-    };
-  }
-
-  /* ----------------------------------------------------------
-     SELF-PROTECTION
-  ----------------------------------------------------------
-
-     Prevent an administrator from accidentally disabling
-     their own account.
-
-     Also prevent an owner from accidentally disabling
-     themselves.
-  ---------------------------------------------------------- */
-
-  if (
-    staffId === user.id &&
-    !isActive
-  ) {
-    return {
-      success: false,
-      message:
-        "You cannot deactivate your own account.",
-    };
-  }
-
-  /* ----------------------------------------------------------
-     ADMIN CLIENT
-  ---------------------------------------------------------- */
-
-  let supabaseAdmin;
-
-  try {
-    supabaseAdmin =
-      createAdminClient();
-  } catch (error) {
-    console.error(
-      "ADMIN SUPABASE CLIENT FAILED:",
-      error,
-    );
-
-    return {
-      success: false,
-      message:
-        "The server is not configured correctly. Please check the Supabase service role configuration.",
-    };
-  }
-
-  /* ----------------------------------------------------------
-     UPDATE PROFILE
-  ---------------------------------------------------------- */
-
-  const {
-    error: updateProfileError,
-  } = await supabaseAdmin
-    .from("profiles")
-    .update({
+  const { error: auditError } = await admin.from("audit_logs").insert({
+    table_name: "staff_management",
+    record_id: staffId,
+    action: "UPDATE_STAFF",
+    actor_id: actor.id,
+    actor_name: actor.full_name,
+    old_data: {
+      full_name: existing.full_name,
+      phone: existing.phone,
+      address: existing.address,
+      contact_email: existing.contact_email,
+      is_active: existing.is_active,
+    },
+    new_data: {
       full_name: fullName,
       phone: phone || null,
-      role: requestedRole,
+      address: address || null,
+      contact_email: contactEmail || null,
       is_active: isActive,
-    })
-    .eq("id", staffId);
+      passcode_reset: Boolean(newPasscode),
+    },
+  });
+  if (auditError) console.warn("STAFF UPDATE AUDIT FAILED", auditError.message);
 
-  if (updateProfileError) {
-    console.error(
-      "UPDATE STAFF PROFILE FAILED:",
-      {
-        message:
-          updateProfileError.message,
-        details:
-          updateProfileError.details,
-        hint:
-          updateProfileError.hint,
-        code:
-          updateProfileError.code,
-      },
-    );
-
-    return {
-      success: false,
-      message:
-        `Unable to update the staff profile: ${updateProfileError.message}`,
-    };
-  }
-
-  /* ----------------------------------------------------------
-     VERIFY UPDATE
-  ---------------------------------------------------------- */
-
-  const {
-    data: verifiedProfile,
-    error: verifyError,
-  } = await supabaseAdmin
-    .from("profiles")
-    .select(
-      "id, full_name, phone, role, is_active",
-    )
-    .eq("id", staffId)
-    .maybeSingle();
-
-  if (
-    verifyError ||
-    !verifiedProfile
-  ) {
-    console.error(
-      "UPDATED PROFILE VERIFICATION FAILED:",
-      verifyError,
-    );
-
-    return {
-      success: false,
-      message:
-        "The profile was updated but could not be verified.",
-    };
-  }
-
-  /* ----------------------------------------------------------
-     REVALIDATE
-  ---------------------------------------------------------- */
-
-  revalidatePath(
-    "/dashboard/staff",
-  );
-
-  revalidatePath(
-    `/dashboard/staff/${staffId}/edit`,
-  );
-
-  revalidatePath(
-    "/dashboard",
-  );
-
-  /* ----------------------------------------------------------
-     SUCCESS
-  ---------------------------------------------------------- */
+  revalidatePath("/dashboard/staff");
+  revalidatePath(`/dashboard/staff/${staffId}/edit`);
+  revalidatePath("/dashboard/shift");
+  revalidatePath("/dashboard");
 
   return {
     success: true,
-    message:
-      `${fullName}'s profile was updated successfully.`,
+    message: newPasscode
+      ? `${fullName}'s profile was saved and their 4-digit service passcode was reset.`
+      : `${fullName}'s profile was updated successfully.`,
   };
 }

@@ -4,7 +4,7 @@ import ForgotPasswordForm from "./forgot-password-form";
 
 export default function ForgotPasswordPage() {
   return (
-    <main className="relative flex min-h-screen overflow-hidden bg-neutral-950 text-white">
+    <main className="relative flex min-h-screen overflow-hidden bg-blue-800 text-white">
 
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute left-1/2 top-0 h-[600px] w-[600px] -translate-x-1/2 rounded-full bg-white/[0.035] blur-3xl" />

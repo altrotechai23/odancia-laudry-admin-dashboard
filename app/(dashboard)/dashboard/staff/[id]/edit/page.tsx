@@ -99,6 +99,8 @@ export default async function EditStaffPage({
         id,
         full_name,
         phone,
+        address,
+        contact_email,
         role,
         avatar_url,
         is_active
@@ -299,6 +301,8 @@ export default async function EditStaffPage({
     role: profile.role,
     avatar_url: profile.avatar_url,
     is_active: profile.is_active,
+    address: profile.address ?? "",
+    contact_email: profile.contact_email ?? "",
     email,
   };
 
@@ -328,7 +332,7 @@ export default async function EditStaffPage({
 
         <header className="mt-7">
           <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-neutral-950 text-white shadow-sm">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-800 text-white shadow-sm">
               <UserRound className="h-5 w-5" />
             </div>
 

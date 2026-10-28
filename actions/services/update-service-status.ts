@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
+import { requireOwnerOrAdmin } from "@/lib/auth/get-current-user";
+import { authorizeStaffWrite, clearStaffWriteAuthorization, logStaffServiceOperation } from "@/lib/staff/security";
 
 import {
   sendReadyForCollectionSms,
@@ -21,6 +23,7 @@ type UpdateServiceStatusResult = {
 export async function updateServiceStatus(
   serviceId: string,
   status: ServiceStatus,
+  passcode = "",
 ): Promise<UpdateServiceStatusResult> {
   if (!serviceId) {
     return {
@@ -29,7 +32,11 @@ export async function updateServiceStatus(
         "Service ID is required.",
     };
   }
+  if (!["pending", "ready_for_collection", "collected"].includes(String(status))) {
+    return { success: false, message: "Choose a valid service status." };
+  }
 
+  await requireOwnerOrAdmin();
   const supabase =
     await createClient();
 
@@ -48,6 +55,7 @@ export async function updateServiceStatus(
       id,
       service_date,
       collection_date,
+      service_status,
       number_of_items,
       fulfillment_method,
       total_price,
@@ -81,20 +89,30 @@ export async function updateServiceStatus(
 
   /*
    * ----------------------------------------------------------
-   * UPDATE STATUS
+   * BARCODE AUTHORIZATION + UPDATE STATUS
    * ----------------------------------------------------------
    */
 
-  const {
-    error: updateError,
-  } = await supabase
-    .from("services")
-    .update({
-      service_status: status,
-      updated_at:
-        new Date().toISOString(),
-    })
-    .eq("id", serviceId);
+  const authorization = await authorizeStaffWrite(passcode);
+  if (!authorization.success) {
+    return { success: false, message: authorization.message ?? "Staff passcode verification failed." };
+  }
+
+  const updateResult = await (async () => {
+    try {
+      return await supabase
+        .from("services")
+        .update({
+          service_status: status,
+          updated_by: authorization.staffId,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", serviceId);
+    } finally {
+      await clearStaffWriteAuthorization(authorization.authorizationId);
+    }
+  })();
+  const { error: updateError } = updateResult;
 
   if (updateError) {
     console.error(
@@ -108,6 +126,15 @@ export async function updateServiceStatus(
         "Unable to update service status.",
     };
   }
+
+  await logStaffServiceOperation({
+    staffId: authorization.staffId,
+    staffName: authorization.staffName,
+    serviceId: service.id,
+    action: authorization.actorRole === "staff" ? "STAFF_UPDATE_SERVICE_STATUS" : "ADMIN_UPDATE_SERVICE_STATUS",
+    oldData: { service_status: service.service_status ?? null },
+    newData: { service_status: status },
+  });
 
   /*
    * ----------------------------------------------------------

@@ -34,7 +34,7 @@ type ServiceDetailsPageProps = {
 export default async function ServiceDetailsPage({
   params,
 }: ServiceDetailsPageProps) {
-  await requireUser();
+  const currentUser = await requireUser();
 
   const { id } =
     await params;
@@ -74,7 +74,7 @@ export default async function ServiceDetailsPage({
 
             <Link
               href="/dashboard/services"
-              className="mt-6 inline-flex h-10 items-center gap-2 rounded-xl bg-neutral-950 px-4 text-xs font-medium text-white transition hover:bg-neutral-800"
+              className="mt-6 inline-flex h-10 items-center gap-2 rounded-xl bg-blue-800 px-4 text-xs font-medium text-white transition hover:bg-blue-900"
             >
               <ArrowLeft className="h-3.5 w-3.5" />
 
@@ -142,6 +142,11 @@ export default async function ServiceDetailsPage({
                     service.service_status
                   }
                 />
+                {service.is_express && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-800">
+                    Express · 2–4 hours
+                  </span>
+                )}
 
               </div>
 
@@ -266,6 +271,22 @@ export default async function ServiceDetailsPage({
                 />
 
                 <DetailBlock
+                  label="Agreed base price"
+                  value={formatCurrency(service.base_price)}
+                />
+
+                {service.is_express && (
+                  <DetailBlock
+                    label="Express completion window"
+                    value={
+                      service.expected_completion_at
+                        ? `${formatDateTime(service.express_earliest_at ?? service.expected_completion_at)} – ${formatDateTime(service.expected_completion_at)}`
+                        : "2–4 hours from service creation"
+                    }
+                  />
+                )}
+
+                <DetailBlock
                   label="Number of items"
                   value={
                     service.number_of_items
@@ -345,7 +366,7 @@ export default async function ServiceDetailsPage({
 
   <div className="flex items-center gap-3 border-b border-black/[0.06] px-5 py-4 sm:px-6">
 
-    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-neutral-950 text-white">
+    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-800 text-white">
       <Clock3 className="h-4 w-4" />
     </div>
 
@@ -365,9 +386,7 @@ export default async function ServiceDetailsPage({
 
     <ServiceActions
       serviceId={service.id}
-      status={
-        service.service_status
-      }
+      status={service.service_status}
     />
 
   </div>
@@ -394,12 +413,8 @@ export default async function ServiceDetailsPage({
       amountPaid={
         service.amount_paid
       }
-      balance={
-        service.balance
-      }
-      paymentStatus={
-        service.payment_status
-      }
+      serviceTypeName={service.service_type_name}
+      paymentHistory={service.payment_history}
     />
   </div>
 </section>
@@ -545,7 +560,7 @@ function SectionHeader({
   return (
     <div className="flex items-center gap-3 border-b border-black/[0.06] px-5 py-4 sm:px-6">
 
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-neutral-950 text-white">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-800 text-white">
         {icon}
       </div>
 
@@ -694,7 +709,7 @@ function PaymentBadge({
     },
 
     partial: {
-      label: "Deposit received",
+      label: "Partially paid",
       className:
         "bg-amber-50 text-amber-700 ring-amber-600/10",
     },

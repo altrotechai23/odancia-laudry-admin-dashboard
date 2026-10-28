@@ -33,11 +33,16 @@ export type LaundryService = {
   email: string | null;
 
   price: number;
+  base_price: number;
+  is_express: boolean;
+  express_earliest_at: string | null;
+  expected_completion_at: string | null;
   deposit: number;
   amount_paid: number;
   balance: number;
 
   payment_type: string | null;
+  payment_history: ServicePaymentTransaction[];
   payment_status: PaymentStatus;
 
   service_status: ServiceStatus;
@@ -56,6 +61,21 @@ export type LaundryService = {
 
   created_at: string;
   updated_at: string;
+};
+
+
+export type ServicePaymentTransaction = {
+  id: string;
+  amount: number;
+  payment_method: string;
+  payment_stage: string | null;
+  reference: string | null;
+  notes: string | null;
+  received_by: string | null;
+  received_by_name: string | null;
+  received_by_role: "owner" | "admin" | "staff" | null;
+  paid_at: string | null;
+  created_at: string;
 };
 
 export type ServicesSummary = {
@@ -105,6 +125,10 @@ type ServiceRow = {
   collection_date: string | null;
 
   total_price: number | string | null;
+  base_price: number | string | null;
+  is_express: boolean | null;
+  express_earliest_at: string | null;
+  expected_completion_at: string | null;
   deposit_amount: number | string | null;
   amount_paid: number | string | null;
   balance: number | string | null;
@@ -185,27 +209,6 @@ function normalizeServiceStatus(
 
 
 /* ============================================================
-   PAYMENT NORMALIZATION
-============================================================ */
-
-function normalizePaymentStatus(
-  value: string | null,
-): PaymentStatus {
-  switch (value) {
-    case "paid":
-      return "paid";
-
-    case "partial":
-      return "partial";
-
-    case "unpaid":
-    default:
-      return "unpaid";
-  }
-}
-
-
-/* ============================================================
    FULFILLMENT NORMALIZATION
 ============================================================ */
 
@@ -231,6 +234,7 @@ function normalizeFulfillmentMethod(
 
 function mapService(
   service: ServiceRow,
+  paymentHistory: ServicePaymentTransaction[] = [],
 ): LaundryService {
   const client =
     firstRelation(service.clients);
@@ -244,6 +248,26 @@ function mapService(
     firstRelation(
       service.created_by_profile,
     );
+
+  // The payments ledger is the source of truth when transactions exist.
+  // For legacy services with no ledger rows, preserve amount_paid as a fallback,
+  // but never trust a stale services.balance of zero to imply payment in full.
+  const serviceTotal = Math.max(0, Number(service.total_price ?? 0));
+  const storedAmountPaid = Math.max(0, Number(service.amount_paid ?? 0));
+  const ledgerAmountPaid = paymentHistory.reduce(
+    (sum, payment) => sum + Math.max(0, Number(payment.amount) || 0),
+    0,
+  );
+  const effectiveAmountPaid = Math.max(
+    0,
+    paymentHistory.length > 0 ? ledgerAmountPaid : storedAmountPaid,
+  );
+  const effectiveBalance = Math.max(0, Math.round((serviceTotal - effectiveAmountPaid) * 100) / 100);
+  const effectivePaymentStatus: PaymentStatus = effectiveBalance <= 0
+    ? "paid"
+    : effectiveAmountPaid > 0
+      ? "partial"
+      : "unpaid";
 
   return {
     id: service.id,
@@ -273,37 +297,26 @@ function mapService(
     email:
       client?.email ?? null,
 
-    price:
-      Number(
-        service.total_price ?? 0,
-      ),
+    price: serviceTotal,
+
+    base_price: Number(service.base_price ?? service.total_price ?? 0),
+    is_express: Boolean(service.is_express),
+    express_earliest_at: service.express_earliest_at ?? null,
+    expected_completion_at: service.expected_completion_at ?? null,
 
     deposit:
       Number(
         service.deposit_amount ?? 0,
       ),
 
-    amount_paid:
-      Number(
-        service.amount_paid ?? 0,
-      ),
+    amount_paid: effectiveAmountPaid,
 
-    balance:
-      Number(
-        service.balance ?? 0,
-      ),
+    balance: effectiveBalance,
 
-    /*
-     * Payment type will be supplied by
-     * the payments system when payment
-     * transactions are implemented.
-     */
-    payment_type: null,
+    payment_type: paymentHistory[0]?.payment_method ?? null,
+    payment_history: paymentHistory,
 
-    payment_status:
-      normalizePaymentStatus(
-        service.payment_status,
-      ),
+    payment_status: effectivePaymentStatus,
 
     service_status:
       normalizeServiceStatus(
@@ -383,6 +396,126 @@ function buildServicesSummary(
 
 
 /* ============================================================
+   PAYMENT HISTORY ENRICHMENT
+============================================================ */
+
+type PaymentDatabaseRow = {
+  id: string;
+  service_id: string;
+  amount: number | string | null;
+  payment_method: string | null;
+  payment_stage: string | null;
+  reference: string | null;
+  notes: string | null;
+  received_by: string | null;
+  paid_at: string | null;
+  created_at: string;
+};
+
+type PaymentActorProfile = {
+  id: string;
+  full_name: string;
+  role: "owner" | "admin" | "staff";
+};
+
+async function loadPaymentHistory(
+  serviceIds: string[],
+): Promise<Map<string, ServicePaymentTransaction[]>> {
+  const grouped = new Map<string, ServicePaymentTransaction[]>();
+  if (serviceIds.length === 0) return grouped;
+
+  const supabase = await createClient();
+  const paymentRows: PaymentDatabaseRow[] = [];
+
+  // Chunk the IDs to keep PostgREST URLs manageable for larger service lists.
+  for (let start = 0; start < serviceIds.length; start += 100) {
+    const chunk = serviceIds.slice(start, start + 100);
+    const { data, error } = await supabase
+      .from("payments")
+      .select("id, service_id, amount, payment_method, payment_stage, reference, notes, received_by, paid_at, created_at")
+      .in("service_id", chunk)
+      .order("paid_at", { ascending: false });
+
+    if (error) {
+      console.warn("SERVICE PAYMENT HISTORY LOAD FAILED", error.message);
+      // Keep the service list readable if a deployment has not yet granted the
+      // expected read permission; detail reads will retry the next time.
+      continue;
+    }
+    paymentRows.push(...((data ?? []) as unknown as PaymentDatabaseRow[]));
+  }
+
+  // The legacy payment audit trigger records the authenticated actor even for
+  // older ledger rows where received_by was blank. Use it only as a fallback;
+  // new service writes always set received_by to the verified operator.
+  const auditActorByPayment = new Map<string, { actor_id: string | null; actor_name: string | null }>();
+  const paymentIds = paymentRows.map((payment) => payment.id);
+  for (let start = 0; start < paymentIds.length; start += 100) {
+    const chunk = paymentIds.slice(start, start + 100);
+    const { data, error } = await supabase
+      .from("audit_logs")
+      .select("record_id, actor_id, actor_name")
+      .eq("table_name", "payments")
+      .eq("action", "INSERT")
+      .in("record_id", chunk);
+    if (error) {
+      console.warn("LEGACY PAYMENT AUDIT ACTOR LOOKUP FAILED", error.message);
+      continue;
+    }
+    for (const audit of data ?? []) {
+      if (audit.record_id && !auditActorByPayment.has(audit.record_id)) {
+        auditActorByPayment.set(audit.record_id, { actor_id: audit.actor_id ?? null, actor_name: audit.actor_name ?? null });
+      }
+    }
+  }
+
+  const actorIds = [...new Set(paymentRows.flatMap((payment) => {
+    const id = payment.received_by ?? auditActorByPayment.get(payment.id)?.actor_id ?? null;
+    return id ? [id] : [];
+  }))];
+  const actorProfiles = new Map<string, PaymentActorProfile>();
+
+  for (let start = 0; start < actorIds.length; start += 100) {
+    const chunk = actorIds.slice(start, start + 100);
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, full_name, role")
+      .in("id", chunk);
+    if (error) {
+      console.warn("PAYMENT ACTOR PROFILE LOOKUP FAILED", error.message);
+      continue;
+    }
+    for (const profile of (data ?? []) as unknown as PaymentActorProfile[]) {
+      actorProfiles.set(profile.id, profile);
+    }
+  }
+
+  for (const row of paymentRows) {
+    const auditActor = auditActorByPayment.get(row.id);
+    const actorId = row.received_by ?? auditActor?.actor_id ?? null;
+    const actor = actorId ? actorProfiles.get(actorId) : undefined;
+    const item: ServicePaymentTransaction = {
+      id: row.id,
+      amount: Number(row.amount ?? 0),
+      payment_method: String(row.payment_method ?? "other").toLowerCase(),
+      payment_stage: row.payment_stage ?? null,
+      reference: row.reference ?? null,
+      notes: row.notes ?? null,
+      received_by: actorId,
+      received_by_name: actor?.full_name ?? auditActor?.actor_name ?? null,
+      received_by_role: actor?.role ?? null,
+      paid_at: row.paid_at ?? null,
+      created_at: row.created_at,
+    };
+    const list = grouped.get(row.service_id) ?? [];
+    list.push(item);
+    grouped.set(row.service_id, list);
+  }
+
+  return grouped;
+}
+
+/* ============================================================
    SERVICE QUERY
 ============================================================ */
 
@@ -395,6 +528,10 @@ const SERVICE_SELECT = `
   service_time,
   collection_date,
   total_price,
+  base_price,
+  is_express,
+  express_earliest_at,
+  expected_completion_at,
   deposit_amount,
   amount_paid,
   balance,
@@ -590,8 +727,8 @@ export async function getServices({
   const rows =
     (data ?? []) as unknown as ServiceRow[];
 
-  const services =
-    rows.map(mapService);
+  const paymentHistory = await loadPaymentHistory(rows.map((row) => row.id));
+  const services = rows.map((row) => mapService(row, paymentHistory.get(row.id) ?? []));
 
   /* ==========================================================
      SUMMARY
@@ -653,7 +790,7 @@ export async function getService(
     return null;
   }
 
-  return mapService(
-    data as unknown as ServiceRow,
-  );
+  const row = data as unknown as ServiceRow;
+  const paymentHistory = await loadPaymentHistory([row.id]);
+  return mapService(row, paymentHistory.get(row.id) ?? []);
 }

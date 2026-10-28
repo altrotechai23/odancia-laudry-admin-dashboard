@@ -785,7 +785,7 @@ function SummaryCard({
 
       <div className="flex items-start justify-between gap-3">
 
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-neutral-950 text-white">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-800 text-white">
           {icon}
         </div>
 
@@ -957,7 +957,7 @@ function FilterLink({
       href={href}
       className={
         active
-          ? "inline-flex items-center justify-center bg-neutral-950 px-3 text-[11px] font-semibold text-white"
+          ? "inline-flex items-center justify-center bg-blue-800 px-3 text-[11px] font-semibold text-white"
           : "inline-flex items-center justify-center px-3 text-[11px] font-medium text-neutral-500 transition hover:bg-white hover:text-neutral-950"
       }
     >

@@ -143,7 +143,7 @@ export default async function ActivityPage({
 
               <div className="mt-3 flex items-center gap-3">
 
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-neutral-950 text-white">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-800 text-white">
                   <Activity className="h-5 w-5" />
                 </div>
 
@@ -286,7 +286,7 @@ export default async function ActivityPage({
 
               <button
                 type="submit"
-                className="h-11 rounded-xl bg-neutral-950 px-5 text-xs font-semibold text-white transition hover:bg-neutral-800"
+                className="h-11 rounded-xl bg-blue-800 px-5 text-xs font-semibold text-white transition hover:bg-blue-900"
               >
                 Search
               </button>
@@ -772,7 +772,7 @@ function EmptyState({
       {filtered && (
         <Link
           href="/dashboard/activity"
-          className="mt-5 inline-flex h-10 items-center gap-2 rounded-xl bg-neutral-950 px-4 text-xs font-medium text-white transition hover:bg-neutral-800"
+          className="mt-5 inline-flex h-10 items-center gap-2 rounded-xl bg-blue-800 px-4 text-xs font-medium text-white transition hover:bg-blue-900"
         >
           Clear filters
         </Link>
@@ -863,7 +863,7 @@ function Pagination({
               action,
               page: nextPage,
             })}
-            className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-neutral-950 px-3 text-xs font-medium text-white transition hover:bg-neutral-800"
+            className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-blue-800 px-3 text-xs font-medium text-white transition hover:bg-blue-900"
           >
             Next
             <ChevronRight className="h-3.5 w-3.5" />

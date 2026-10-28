@@ -62,7 +62,7 @@ const initialState: CreateServiceState = {
 
 
 const inputClassName =
-  "h-12 w-full rounded-xl border border-neutral-200 bg-white px-4 text-sm text-neutral-950 outline-none transition-all placeholder:text-neutral-400 focus:border-neutral-950 focus:ring-4 focus:ring-neutral-950/5";
+  "h-12 w-full rounded-xl border border-neutral-200 bg-white px-4 text-sm text-neutral-950 outline-none transition-all placeholder:text-neutral-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10";
 
 
 const labelClassName =
@@ -79,6 +79,30 @@ export default function NewServiceForm({
       createService,
       initialState,
     );
+
+  const serviceFormRef = useRef<HTMLFormElement>(null);
+  const staffPasscodeRef = useRef<HTMLInputElement>(null);
+  const allowNextSubmitRef = useRef(false);
+  const [passcodeDialogOpen, setPasscodeDialogOpen] = useState(false);
+  const [staffPasscode, setStaffPasscode] = useState("");
+
+  function handleServiceFormSubmit(event: React.FormEvent<HTMLFormElement>) {
+    if (!allowNextSubmitRef.current) {
+      event.preventDefault();
+      setStaffPasscode("");
+      setPasscodeDialogOpen(true);
+      return;
+    }
+    allowNextSubmitRef.current = false;
+  }
+
+  function submitWithStaffPasscode() {
+    if (!/^\d{4}$/.test(staffPasscode) || !serviceFormRef.current || !staffPasscodeRef.current) return;
+    staffPasscodeRef.current.value = staffPasscode;
+    allowNextSubmitRef.current = true;
+    setPasscodeDialogOpen(false);
+    serviceFormRef.current.requestSubmit();
+  }
 
 
   /*
@@ -135,6 +159,8 @@ export default function NewServiceForm({
   const [totalPrice, setTotalPrice] =
     useState("");
 
+  const [isExpress, setIsExpress] = useState(false);
+
   const [deposit, setDeposit] =
     useState("");
 
@@ -182,7 +208,8 @@ export default function NewServiceForm({
    * ----------------------------------------------------------
    */
 
-  const price = Number(totalPrice) || 0;
+  const basePrice = Number(totalPrice) || 0;
+  const price = isExpress ? basePrice * 2 : basePrice;
 
   const depositAmount =
     Number(deposit) || 0;
@@ -225,6 +252,14 @@ export default function NewServiceForm({
    * CUSTOMER SEARCH
    * ----------------------------------------------------------
    */
+
+  useEffect(() => {
+    if (state.message) {
+      setStaffPasscode("");
+      if (staffPasscodeRef.current) staffPasscodeRef.current.value = "";
+      allowNextSubmitRef.current = false;
+    }
+  }, [state.message, state.success]);
 
   useEffect(() => {
   if (isNewClient) {
@@ -404,7 +439,7 @@ export default function NewServiceForm({
                 "/dashboard/services",
               )
             }
-            className="mt-7 h-12 w-full rounded-xl bg-neutral-950 px-5 text-sm font-medium text-white transition hover:bg-neutral-800 active:scale-[0.99]"
+            className="mt-7 h-12 w-full rounded-xl bg-blue-800 px-5 text-sm font-medium text-white transition hover:bg-blue-900 active:scale-[0.99]"
           >
             Back to services
           </button>
@@ -416,9 +451,12 @@ export default function NewServiceForm({
 
   return (
     <form
+      ref={serviceFormRef}
       action={formAction}
+      onSubmit={handleServiceFormSubmit}
       className="space-y-6"
     >
+      <input type="hidden" name="staff_passcode" ref={staffPasscodeRef} defaultValue="" />
       {/* =====================================================
           ERROR
       ====================================================== */}
@@ -485,7 +523,7 @@ export default function NewServiceForm({
       <section className="overflow-visible rounded-3xl border border-neutral-200 bg-white shadow-sm">
         <div className="border-b border-neutral-100 px-5 py-5 sm:px-7">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-950 text-white">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-800 text-white">
               <UserRound className="h-5 w-5" />
             </div>
 
@@ -652,7 +690,7 @@ export default function NewServiceForm({
                       }
                       className="flex w-full items-center gap-3 border-t border-neutral-100 bg-neutral-50 p-4 text-left text-sm font-medium text-neutral-950 transition hover:bg-neutral-100"
                     >
-                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-neutral-950 text-white">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-800 text-white">
                         +
                       </span>
 
@@ -665,7 +703,7 @@ export default function NewServiceForm({
           ) : clientId ? (
             <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
               <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-neutral-950 text-white">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-800 text-white">
                   <UserRound className="h-5 w-5" />
                 </div>
 
@@ -937,7 +975,7 @@ export default function NewServiceForm({
               htmlFor="totalPrice"
               className={labelClassName}
             >
-              Agreed price
+              Agreed base price
             </label>
 
             <div className="relative">
@@ -947,7 +985,7 @@ export default function NewServiceForm({
 
               <input
                 id="totalPrice"
-                name="totalPrice"
+                name="basePrice"
                 type="number"
                 min="0"
                 step="0.01"
@@ -965,8 +1003,30 @@ export default function NewServiceForm({
             </div>
 
             <p className="mt-2 text-xs text-neutral-400">
-              Enter the negotiated customer price.
+              Enter the negotiated standard price. Express service doubles this amount.
             </p>
+          </div>
+
+          <div className="sm:col-span-2 rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
+            <label className="flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                name="isExpress"
+                checked={isExpress}
+                onChange={(event) => setIsExpress(event.target.checked)}
+                className="mt-1 h-4 w-4 rounded border-neutral-300 accent-neutral-950"
+              />
+              <span className="min-w-0 flex-1">
+                <span className="flex flex-wrap items-center gap-2 text-sm font-semibold text-neutral-950">
+                  Express service <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">2–4 hours</span>
+                </span>
+                <span className="mt-1 block text-xs leading-5 text-neutral-500">Express service costs twice the agreed base price. The expected completion window is recorded automatically.</span>
+                <span className="mt-2 block text-sm font-semibold text-neutral-950">
+                  {isExpress ? "Express total" : "Service total"}: R {price.toFixed(2)}
+                </span>
+              </span>
+            </label>
+            <input type="hidden" name="totalPrice" value={price.toFixed(2)} />
           </div>
 
 
@@ -1138,7 +1198,7 @@ export default function NewServiceForm({
             className={`group rounded-2xl border p-5 text-left transition ${
               fulfillmentMethod ===
               "customer_pickup"
-                ? "border-neutral-950 bg-neutral-950 text-white"
+                ? "border-neutral-950 bg-blue-800 text-white"
                 : "border-neutral-200 bg-white hover:border-neutral-400"
             }`}
           >
@@ -1187,7 +1247,7 @@ export default function NewServiceForm({
             className={`group rounded-2xl border p-5 text-left transition ${
               fulfillmentMethod ===
               "delivery"
-                ? "border-neutral-950 bg-neutral-950 text-white"
+                ? "border-neutral-950 bg-blue-800 text-white"
                 : "border-neutral-200 bg-white hover:border-neutral-400"
             }`}
           >
@@ -1250,7 +1310,7 @@ export default function NewServiceForm({
           className="flex w-full items-center justify-between px-5 py-5 text-left sm:px-7"
         >
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-950 text-white">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-800 text-white">
               <WalletCards className="h-5 w-5" />
             </div>
 
@@ -1398,7 +1458,7 @@ export default function NewServiceForm({
                   </div>
 
 
-                  <div className="rounded-2xl bg-neutral-950 p-4 text-white">
+                  <div className="rounded-2xl bg-blue-800 p-4 text-white">
                     <p className="text-xs text-white/60">
                       Balance
                     </p>
@@ -1515,7 +1575,7 @@ export default function NewServiceForm({
                   }
                   rows={4}
                   placeholder="Special instructions, stains, customer requests..."
-                  className="w-full resize-none rounded-xl border border-neutral-200 bg-white p-4 text-sm text-neutral-950 outline-none transition-all placeholder:text-neutral-400 focus:border-neutral-950 focus:ring-4 focus:ring-neutral-950/5"
+                  className="w-full resize-none rounded-xl border border-neutral-200 bg-white p-4 text-sm text-neutral-950 outline-none transition-all placeholder:text-neutral-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
                 />
               </div>
             </motion.div>
@@ -1558,7 +1618,7 @@ export default function NewServiceForm({
                 !serviceTypeId ||
                 !totalPrice
               }
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-neutral-950 px-6 text-sm font-semibold text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-blue-800 px-6 text-sm font-semibold text-white transition hover:bg-blue-900 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isPending ? (
                 <>
@@ -1577,6 +1637,25 @@ export default function NewServiceForm({
           </div>
         </div>
       </div>
+
+      {passcodeDialogOpen && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
+          <div role="dialog" aria-modal="true" aria-labelledby="service-passcode-title" className="w-full max-w-sm rounded-3xl border border-slate-100 bg-white p-5 shadow-2xl sm:p-6">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-800"><ShieldCheckIcon /></div>
+            <h3 id="service-passcode-title" className="mt-4 text-base font-semibold text-slate-950">Authorize service creation</h3>
+            <p className="mt-2 text-xs leading-5 text-slate-500">Enter 0000 to authorize this action as the currently logged-in admin, or enter the unique 4-digit code of an active staff member who is clocked in. Reading service records never requires a code.</p>
+            <input autoFocus type="password" autoComplete="off" inputMode="numeric" pattern="[0-9]{4}" minLength={4} maxLength={4} value={staffPasscode} onChange={(event) => setStaffPasscode(event.target.value.replace(/\D/g, "").slice(0, 4))} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); submitWithStaffPasscode(); } }} placeholder="Admin 0000 or staff code" className="mt-4 h-12 w-full rounded-xl border border-slate-200 px-4 text-center text-lg tracking-[0.5em] text-slate-950 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10" />
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <button type="button" onClick={() => { setPasscodeDialogOpen(false); setStaffPasscode(""); if (staffPasscodeRef.current) staffPasscodeRef.current.value = ""; }} className="min-h-11 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
+              <button type="button" onClick={submitWithStaffPasscode} disabled={!/^\d{4}$/.test(staffPasscode) || isPending} className="min-h-11 rounded-xl bg-blue-800 text-xs font-semibold text-white hover:bg-blue-900 disabled:opacity-50">Verify & create</button>
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   );
+}
+
+function ShieldCheckIcon() {
+  return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3 19 6v5c0 5-3.3 8-7 10-3.7-2-7-5-7-10V6l7-3Z" /><path d="m9 12 2 2 4-4" /></svg>;
 }

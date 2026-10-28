@@ -1,12 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f7f7f5;
-  --foreground: #111111;
-  --muted: #737373;
-  --border: #e5e5e5;
+  --background: #f4f8fc;
+  --foreground: #101828;
+  --muted: #64748b;
+  --border: #e2eaf3;
   --surface: #ffffff;
-  --surface-secondary: #f2f2f0;
+  --surface-secondary: #edf4fb;
+  --odancia-blue: #0b4f91;
+  --odancia-blue-deep: #073765;
+  --odancia-red: #e31b36;
 }
 
 * {
@@ -22,11 +25,8 @@ body {
   min-height: 100vh;
   margin: 0;
   background:
-    radial-gradient(
-      circle at top right,
-      rgba(255, 255, 255, 0.95),
-      transparent 32rem
-    ),
+    radial-gradient(circle at top right, rgba(219, 234, 254, 0.58), transparent 34rem),
+    radial-gradient(circle at bottom left, rgba(254, 226, 226, 0.36), transparent 30rem),
     var(--background);
   color: var(--foreground);
   font-family:
@@ -49,7 +49,7 @@ button {
 }
 
 ::selection {
-  background: #111111;
+  background: var(--odancia-blue);
   color: #ffffff;
 }
 
@@ -63,10 +63,45 @@ button {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #d4d4d4;
+  background: #c6d5e6;
   border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #a3a3a3;
+  background: var(--odancia-blue);
+}
+
+/* Lightweight shimmer for quick, stable navigation on iPad/tablet. */
+.odancia-shimmer {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background: #eaf0f7;
+  border-radius: 0.85rem;
+}
+
+.odancia-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.78), transparent);
+  animation: odancia-shimmer 1.25s ease-in-out infinite;
+}
+
+@keyframes odancia-shimmer {
+  100% { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .odancia-shimmer::after { animation: none; transform: none; opacity: 0.25; }
+  *, *::before, *::after { scroll-behavior: auto !important; }
+}
+
+/* iPad-sized controls: a comfortable touch target without inflating desktop. */
+@media (min-width: 640px) and (max-width: 1279px) {
+  button, select, input[type="button"], input[type="submit"] {
+    min-height: 2.75rem;
+  }
 }
