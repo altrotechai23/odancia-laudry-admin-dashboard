@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { CheckCircle2, Loader2, ShieldCheck, Truck } from "lucide-react";
 import { updateServiceStatus } from "@/actions/services/update-service-status";
 
@@ -33,12 +33,6 @@ export default function ServiceActions({ serviceId, status }: ServiceActionsProp
     initialState,
   );
 
-  useEffect(() => {
-    if (state.message) {
-      setPasscode("");
-      if (passcodeRef.current) passcodeRef.current.value = "";
-    }
-  }, [state.message]);
 
   function beginStatusUpdate(nextStatus: ServiceStatus) {
     setPasscode("");

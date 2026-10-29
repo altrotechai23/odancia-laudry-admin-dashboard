@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import { AlertCircle, CheckCircle2, Loader2, Mail, MapPin, Phone, Save, ShieldCheck, UserRound } from "lucide-react";
 
@@ -11,17 +11,22 @@ type StaffEditFormProps = { profile: StaffProfile; currentRole: UpdateStaffRole 
 
 export default function StaffEditForm({ profile, currentRole }: StaffEditFormProps) {
   const boundAction = updateStaff.bind(null, profile.id);
-  const [state, formAction, pending] = useActionState(boundAction, initialUpdateStaffState);
+  // Declare this state before the action callback closes over its setter.
+  const [passcode, setPasscode] = useState("");
+  const [state, formAction, pending] = useActionState(
+    async (previousState: typeof initialUpdateStaffState, formData: FormData) => {
+      const result = await boundAction(previousState, formData);
+      setPasscode("");
+      return result;
+    },
+    initialUpdateStaffState,
+  );
   const [fullName, setFullName] = useState(profile.full_name);
   const [phone, setPhone] = useState(profile.phone ?? "");
   const [address, setAddress] = useState(profile.address ?? "");
   const [email, setEmail] = useState(profile.contact_email ?? "");
-  const [passcode, setPasscode] = useState("");
   const [isActive, setIsActive] = useState(profile.is_active);
 
-  useEffect(() => {
-    if (state.message) setPasscode("");
-  }, [state.message]);
 
   return (
     <form action={formAction} className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">

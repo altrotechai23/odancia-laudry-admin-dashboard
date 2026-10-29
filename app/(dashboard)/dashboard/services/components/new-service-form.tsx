@@ -73,18 +73,23 @@ export default function NewServiceForm({
   serviceTypes,
 }: NewServiceFormProps) {
   const router = useRouter();
-
-  const [state, formAction, isPending] =
-    useActionState(
-      createService,
-      initialState,
-    );
-
   const serviceFormRef = useRef<HTMLFormElement>(null);
   const staffPasscodeRef = useRef<HTMLInputElement>(null);
   const allowNextSubmitRef = useRef(false);
   const [passcodeDialogOpen, setPasscodeDialogOpen] = useState(false);
   const [staffPasscode, setStaffPasscode] = useState("");
+
+  const [state, formAction, isPending] =
+    useActionState(
+      async (previousState: CreateServiceState, formData: FormData) => {
+        const result = await createService(previousState, formData);
+        setStaffPasscode("");
+        if (staffPasscodeRef.current) staffPasscodeRef.current.value = "";
+        allowNextSubmitRef.current = false;
+        return result;
+      },
+      initialState,
+    );
 
   function handleServiceFormSubmit(event: React.FormEvent<HTMLFormElement>) {
     if (!allowNextSubmitRef.current) {
@@ -256,13 +261,6 @@ export default function NewServiceForm({
    * ----------------------------------------------------------
    */
 
-  useEffect(() => {
-    if (state.message) {
-      setStaffPasscode("");
-      if (staffPasscodeRef.current) staffPasscodeRef.current.value = "";
-      allowNextSubmitRef.current = false;
-    }
-  }, [state.message, state.success]);
 
   useEffect(() => {
   if (isNewClient) {
@@ -1189,7 +1187,7 @@ export default function NewServiceForm({
                 required
               />
             </div>
-            <p className="mt-1.5 text-[11px] font-medium text-red-700">Important: set the customer's promised collection time.</p>
+            <p className="mt-1.5 text-[11px] font-medium text-red-700">Important: set the customer&apos;s promised collection time.</p>
           </div>
         </div>
       </section>

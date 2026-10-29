@@ -548,6 +548,12 @@ export async function importBookServices(rawJson: string, submittedAdminCode: st
       clientByName.set(normaliseName(client.full_name), client.id);
     }
 
+    const resolvedClientId = typeof clientId === "string" && clientId.length > 0 ? clientId : null;
+    if (!resolvedClientId) {
+      failed.push({ row: row.index + 1, service: row.serviceNumber || row.clientName, message: "Customer could not be resolved for this service." });
+      continue;
+    }
+
     let serviceTypeId: string | null = row.serviceTypeId && (serviceTypes ?? []).some((type) => type.id === row.serviceTypeId) ? row.serviceTypeId : null;
     if (!serviceTypeId && row.serviceTypeName) {
       const typeKey = normaliseName(row.serviceTypeName);
@@ -578,12 +584,12 @@ export async function importBookServices(rawJson: string, submittedAdminCode: st
 
     const express = row.isExpress ? expressTimestamps(row.serviceDate, row.serviceTime) : { earliest: null, expected: null };
     const serviceInsert: Record<string, unknown> = {
-      client_id: clientId,
+      client_id: resolvedClientId,
       service_type_id: serviceTypeId,
       service_date: row.serviceDate,
       service_time: row.serviceTime,
-      collection_date: row.collectionDate,
-      collection_time: row.collectionTime,
+      collection_date: row.collectionDate ?? null,
+      collection_time: row.collectionTime ?? null,
       total_price: row.totalPrice,
       base_price: row.basePrice,
       is_express: row.isExpress,
@@ -645,18 +651,18 @@ export async function importBookServices(rawJson: string, submittedAdminCode: st
       old_data: null,
       new_data: {
         service_number: service.service_number,
-        client_id: clientId,
+        client_id: resolvedClientId,
         total_price: row.totalPrice,
-        collection_date: row.collectionDate,
-        collection_time: row.collectionTime,
+        collection_date: row.collectionDate ?? null,
+        collection_time: row.collectionTime ?? null,
         imported_payment_count: row.payments.length,
         import_source_key: row.sourceKey,
       },
     });
-    if (row.phone) clientByPhone.set(normalisePhone(row.phone), clientId);
-    clientByName.set(normaliseName(row.clientName), clientId);
+    if (row.phone) clientByPhone.set(normalisePhone(row.phone), resolvedClientId);
+    clientByName.set(normaliseName(row.clientName), resolvedClientId);
     existingKeys.add(row.sourceKey);
-    existingByKey.set(row.sourceKey, { id: service.id, collection_date: row.collectionDate, collection_time: row.collectionTime });
+    existingByKey.set(row.sourceKey, { id: service.id, collection_date: row.collectionDate ?? null, collection_time: row.collectionTime ?? null });
     imported += 1;
   }
 

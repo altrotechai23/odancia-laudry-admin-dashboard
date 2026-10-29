@@ -196,7 +196,7 @@ export default async function ServicesPage({
     );
   const sort = parseServiceSort(params.sort);
 
-  const { services: allServices } = await getServices();
+  const { services: allServices, asOf } = await getServices();
 
 
   /* ==========================================================
@@ -412,17 +412,17 @@ export default async function ServicesPage({
               </form>
 
 
-              <form action="/dashboard/services" method="GET" className="flex min-h-11 flex-wrap items-center gap-2">
+              <form action="/dashboard/services" method="GET" className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-end gap-2 sm:grid-cols-[auto_minmax(190px,1fr)_auto] lg:w-auto lg:flex-1 lg:max-w-[560px]">
                 {query.trim() && <input type="hidden" name="q" value={query.trim()} />}
                 {status !== "all" && <input type="hidden" name="status" value={status} />}
-                <label htmlFor="services-sort" className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold text-neutral-500"><ArrowUpDown className="h-4 w-4" /> Sort</label>
-                <select id="services-sort" name="sort" defaultValue={sort} className="h-11 min-w-0 rounded-xl border border-black/[0.07] bg-white px-3 text-xs font-semibold text-neutral-700 outline-none focus:border-blue-500">
+                <label htmlFor="services-sort" className="col-span-2 inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-500 sm:col-span-1"><ArrowUpDown className="h-4 w-4" /> Sort</label>
+                <select id="services-sort" name="sort" defaultValue={sort} className="h-11 w-full min-w-0 rounded-xl border border-black/[0.07] bg-white px-3 text-xs font-semibold text-neutral-700 outline-none focus:border-blue-500">
                   <option value="urgency">Urgency (recommended)</option>
                   <option value="collection">Collection soonest</option>
                   <option value="express">Express first</option>
                   <option value="newest">Newest first</option>
                 </select>
-                <button type="submit" className="h-11 rounded-xl bg-blue-800 px-3 text-xs font-semibold text-white hover:bg-blue-900">Apply</button>
+                <button type="submit" className="h-11 whitespace-nowrap rounded-xl bg-blue-800 px-4 text-xs font-semibold text-white hover:bg-blue-900">Apply</button>
               </form>
 
               {/* Filters */}
@@ -604,6 +604,7 @@ export default async function ServicesPage({
                         <ServiceRow
                           key={service.id}
                           service={service}
+                          asOf={asOf}
                         />
                       ),
                     )}
@@ -626,6 +627,7 @@ export default async function ServicesPage({
                     <ServiceCard
                       key={service.id}
                       service={service}
+                      asOf={asOf}
                     />
                   ),
                 )}
@@ -855,13 +857,13 @@ function ServiceCellLink({
   );
 }
 
-function UrgencyFlag({ service }: { service: LaundryService }) {
+function UrgencyFlag({ service, asOf }: { service: LaundryService; asOf: number }) {
   if (service.service_status === "collected") return null;
   const due = collectionDeadline(service);
   if (due === null) {
     return <span className="mt-1 inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-800">Schedule needed</span>;
   }
-  const difference = due - Date.now();
+  const difference = due - asOf;
   if (difference < 0) {
     return <span className="mt-1 inline-flex rounded-full bg-red-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-red-800">Overdue</span>;
   }
@@ -883,7 +885,7 @@ function paymentMethodLabel(method: string) {
   }
 }
 
-function ServiceRow({ service }: { service: LaundryService }) {
+function ServiceRow({ service, asOf }: { service: LaundryService; asOf: number }) {
   const href = `/dashboard/services/${service.id}`;
   return (
     <tr className="group border-b border-black/[0.05] transition-colors hover:bg-blue-50/60 active:bg-blue-50">
@@ -893,7 +895,7 @@ function ServiceRow({ service }: { service: LaundryService }) {
             {service.service_number ?? shortServiceId(service.id)}
           </div>
           {service.is_express && <span className="mt-1 inline-flex rounded-full bg-red-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-red-700">Express</span>}
-          <UrgencyFlag service={service} />
+          <UrgencyFlag service={service} asOf={asOf} />
           <p className="mt-1 text-[11px] text-neutral-400">{formatDate(service.service_date)}{service.service_time ? ` · ${formatTime(service.service_time)}` : ""}</p>
         </ServiceCellLink>
       </td>
@@ -955,7 +957,7 @@ function ServiceRow({ service }: { service: LaundryService }) {
 /* ============================================================
    RESPONSIVE SERVICE CARD — the full card is a tablet-friendly link
 ============================================================ */
-function ServiceCard({ service }: { service: LaundryService }) {
+function ServiceCard({ service, asOf }: { service: LaundryService; asOf: number }) {
   return (
     <Link
       href={`/dashboard/services/${service.id}`}
@@ -976,7 +978,7 @@ function ServiceCard({ service }: { service: LaundryService }) {
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-[10px] font-medium text-neutral-600">{service.service_type_name ?? "Laundry service"}</span>
         {service.is_express && <span className="rounded-full bg-red-50 px-2.5 py-1 text-[10px] font-bold text-red-700">Express</span>}
-        <UrgencyFlag service={service} />
+        <UrgencyFlag service={service} asOf={asOf} />
       </div>
       <div className="mt-4 grid grid-cols-2 gap-2.5">
         <MobileDetail label="Total" value={formatCurrency(service.price)} />
@@ -1070,51 +1072,6 @@ function StatusBadge({
     >
       {item.label}
     </span>
-  );
-}
-
-
-/* ============================================================
-   PAYMENT BADGE
-============================================================ */
-
-function PaymentBadge({
-  status,
-}: {
-  status: LaundryService["payment_status"];
-}) {
-  const config = {
-    unpaid: {
-      label: "Unpaid",
-      className:
-        "text-red-500",
-    },
-
-    partial: {
-      label: "Partially paid",
-      className:
-        "text-amber-700",
-    },
-
-    paid: {
-      label: "Paid",
-      className:
-        "text-emerald-600",
-    },
-  } as const;
-
-
-  const item =
-    config[status] ??
-    config.unpaid;
-
-
-  return (
-    <p
-      className={`mt-1 text-[10px] font-medium ${item.className}`}
-    >
-      {item.label}
-    </p>
   );
 }
 

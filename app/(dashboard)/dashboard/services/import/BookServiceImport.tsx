@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { AlertCircle, CheckCircle2, FileJson, FileUp, Loader2, RotateCcw, UploadCloud } from "lucide-react";
 import { importBookServices, type BookImportResult } from "@/actions/services/import-book-services";
 
@@ -185,7 +186,7 @@ export default function BookServiceImport() {
               <div className="rounded-xl bg-red-50 p-3"><p className="text-xs text-red-800">Failed rows</p><p className="mt-1 text-xl font-bold text-red-950">{result.failed.length}</p></div>
             </div>
             {result.failed.length > 0 && <div className="mt-4 max-h-72 overflow-y-auto rounded-xl border border-red-100"><div className="border-b border-red-100 bg-red-50 p-3 text-xs font-bold text-red-900">Rows to review</div><div className="divide-y divide-slate-100">{result.failed.map((failure) => <div key={`${failure.row}-${failure.service}`} className="p-3"><p className="text-xs font-bold text-slate-900">Row {failure.row} · {failure.service}</p><p className="mt-1 text-xs leading-5 text-red-700">{failure.message}</p></div>)}</div></div>}
-            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end"><button type="button" onClick={reset} className="min-h-11 rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-700">Import another file</button><a href="/dashboard/services" className="inline-flex min-h-11 items-center justify-center rounded-xl bg-blue-800 px-4 text-sm font-bold text-white">View services</a></div>
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end"><button type="button" onClick={reset} className="min-h-11 rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-700">Import another file</button><Link href="/dashboard/services" className="inline-flex min-h-11 items-center justify-center rounded-xl bg-blue-800 px-4 text-sm font-bold text-white">View services</Link></div>
           </div>
         )}
       </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useState } from "react";
 import { CalendarClock, CheckCircle2, Loader2, PencilLine, X } from "lucide-react";
 import {
   updateServiceCollectionSchedule,
@@ -42,12 +42,6 @@ export default function CollectionScheduleEditor({
     initialState,
   );
 
-  useEffect(() => {
-    if (!isOpen) {
-      setDate(collectionDate ?? "");
-      setTime(collectionTime?.slice(0, 5) ?? "");
-    }
-  }, [collectionDate, collectionTime, isOpen]);
 
   function openEditor() {
     setDate(collectionDate ?? "");

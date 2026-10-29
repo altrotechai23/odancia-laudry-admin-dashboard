@@ -588,6 +588,7 @@ export async function getServices({
 } = {}): Promise<{
   services: LaundryService[];
   summary: ServicesSummary;
+  asOf: number;
 }> {
   const supabase = await createClient();
 
@@ -748,6 +749,7 @@ export async function getServices({
   return {
     services,
     summary,
+    asOf: Date.now(),
   };
 }
 

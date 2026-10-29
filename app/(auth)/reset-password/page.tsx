@@ -3,12 +3,14 @@
 import {
   useState,
 } from "react";
+import { useRouter } from "next/navigation";
 
 import {
   createClient,
 } from "@/lib/supabase/client";
 
 export default function ResetPasswordForm() {
+  const router = useRouter();
   const [
     password,
     setPassword,
@@ -92,9 +94,7 @@ export default function ResetPasswordForm() {
 
       window.setTimeout(
         () => {
-          window.location.assign(
-            "/login?reset=success",
-          );
+          router.push("/login?reset=success");
         },
         1400,
       );

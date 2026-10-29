@@ -35,7 +35,7 @@ type ServiceDetailsPageProps = {
 export default async function ServiceDetailsPage({
   params,
 }: ServiceDetailsPageProps) {
-  const currentUser = await requireUser();
+  await requireUser();
 
   const { id } =
     await params;
@@ -617,41 +617,6 @@ function DetailBlock({
 
 
 /* ============================================================
-   MONEY ROW
-============================================================ */
-
-function MoneyRow({
-  label,
-  value,
-  emphasis = false,
-}: {
-  label: string;
-  value: string;
-  emphasis?: boolean;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-4">
-
-      <span className="text-xs text-neutral-500">
-        {label}
-      </span>
-
-      <span
-        className={`text-sm font-semibold ${
-          emphasis
-            ? "text-amber-700"
-            : "text-neutral-900"
-        }`}
-      >
-        {value}
-      </span>
-
-    </div>
-  );
-}
-
-
-/* ============================================================
    STATUS BADGE
 ============================================================ */
 
@@ -688,55 +653,6 @@ function StatusBadge({
     <span
       className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold ring-1 ring-inset ${item.className}`}
     >
-      {item.label}
-    </span>
-  );
-}
-
-
-/* ============================================================
-   PAYMENT BADGE
-============================================================ */
-
-function PaymentBadge({
-  status,
-}: {
-  status: LaundryService["payment_status"];
-}) {
-  const config = {
-    unpaid: {
-      label: "Payment outstanding",
-      className:
-        "bg-red-50 text-red-600 ring-red-600/10",
-    },
-
-    partial: {
-      label: "Partially paid",
-      className:
-        "bg-amber-50 text-amber-700 ring-amber-600/10",
-    },
-
-    paid: {
-      label: "Paid in full",
-      className:
-        "bg-emerald-50 text-emerald-600 ring-emerald-600/10",
-    },
-  } as const;
-
-  const item =
-    config[status] ??
-    config.unpaid;
-
-  return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold ring-1 ring-inset ${item.className}`}
-    >
-      {status === "paid" ? (
-        <CheckCircle2 className="h-3 w-3" />
-      ) : (
-        <Banknote className="h-3 w-3" />
-      )}
-
       {item.label}
     </span>
   );

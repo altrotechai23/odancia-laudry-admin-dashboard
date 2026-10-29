@@ -38,3 +38,11 @@ This application uses Next.js App Router. See [Next.js documentation](https://ne
 - Payment authorization messages are reset when the dialog is opened or the passcode is edited, so a stale invalid-code warning does not appear for a new payment attempt.
 
 No new Supabase migration is required for Phase 8 if `202610280004_book_import_collection_time.sql` was successfully applied earlier. That migration adds `services.collection_time` and `services.import_source_key`. The schedule editor uses the existing collection columns and the existing staff-operation authorization/audit tables.
+
+## Phase 9 — build and iPad toolbar fixes
+
+Phase 9 fixes the reported ESLint and TypeScript issues, adds the missing SMS time formatter, narrows client IDs in book import, and aligns service sorting controls on tablet widths. No database migration is required. See `PHASE9-BUILD-FIXES.md` for the change list and validation status.
+
+## Phase 10 TypeScript hotfix
+
+For the latest targeted importer nullability and SMS collection-time formatter fix, see `PHASE10-TYPESCRIPT-HOTFIX.md`. Extract the latest ZIP into a new folder rather than overlaying it on an older copy; copy only your private environment files (`.env.local` / `.env`) into the new folder.

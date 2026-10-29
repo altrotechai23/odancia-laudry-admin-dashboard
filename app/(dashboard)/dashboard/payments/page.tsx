@@ -2,7 +2,6 @@ import Link from "next/link";
 
 import {
   ArrowDownLeft,
-  ArrowUpRight,
   CheckCircle2,
   Clock3,
   CreditCard,
