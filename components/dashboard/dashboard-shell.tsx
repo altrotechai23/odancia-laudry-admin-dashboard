@@ -203,7 +203,9 @@ export default function DashboardShell({
         </header>
 
         <main className="min-h-[calc(100vh-5rem)]">
-          {children}
+          <div key={pathname} className="odancia-page-enter min-h-full">
+            {children}
+          </div>
         </main>
       </div>
     </div>

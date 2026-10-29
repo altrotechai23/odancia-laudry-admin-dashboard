@@ -1,15 +1,14 @@
 import Link from "next/link";
+import ServicesControls from "./ServicesControls";
 
 import {
   ArrowRight,
-  ArrowUpDown,
   Banknote,
   CalendarDays,
   CheckCircle2,
   Clock3,
   Package,
   Plus,
-  Search,
   Truck,
   UserRound,
 } from "lucide-react";
@@ -113,51 +112,6 @@ function sortServices(items: LaundryService[], sort: ServiceSort): LaundryServic
     if (sort === "urgency" && left.is_express !== right.is_express) return left.is_express ? -1 : 1;
     return Date.parse(right.created_at) - Date.parse(left.created_at);
   });
-}
-
-
-/* ============================================================
-   FILTER URL
-============================================================ */
-
-function buildFilterUrl(
-  status: ServiceStatusFilter,
-  query: string,
-  sort: ServiceSort,
-) {
-  const params = new URLSearchParams();
-
-  const trimmedQuery =
-    query.trim();
-
-  /*
-   * Only add q when the user actually
-   * entered a search query.
-   */
-  if (trimmedQuery) {
-    params.set(
-      "q",
-      trimmedQuery,
-    );
-  }
-
-  /*
-   * "all" means no status parameter.
-   */
-  if (status !== "all") {
-    params.set(
-      "status",
-      status,
-    );
-  }
-  if (sort !== "urgency") params.set("sort", sort);
-
-  const search =
-    params.toString();
-
-  return search
-    ? `/dashboard/services?${search}`
-    : "/dashboard/services";
 }
 
 
@@ -321,7 +275,7 @@ export default async function ServicesPage({
             SUMMARY
         ================================================== */}
 
-        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <section className="odancia-stagger grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
 
           <QuickStat
             label="Pending"
@@ -378,157 +332,12 @@ export default async function ServicesPage({
               TOOLBAR
           ================================================== */}
 
-          <div className="border-b border-black/[0.06] p-4 sm:p-5">
-
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-
-              {/* Search */}
-
-              <form
-                action="/dashboard/services"
-                method="GET"
-                className="w-full lg:max-w-md"
-              >
-
-                {status !== "all" && (
-                  <input type="hidden" name="status" value={status} />
-                )}
-                {sort !== "urgency" && <input type="hidden" name="sort" value={sort} />}
-
-                <div className="relative">
-
-                  <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
-
-                  <input
-                    type="search"
-                    name="q"
-                    defaultValue={query}
-                    placeholder="Search client, phone or service..."
-                    className="h-11 w-full rounded-xl border border-black/[0.07] bg-neutral-50 pl-10 pr-4 text-sm outline-none transition placeholder:text-neutral-400 focus:border-black/20 focus:bg-white focus:ring-4 focus:ring-black/[0.03]"
-                  />
-
-                </div>
-
-              </form>
-
-
-              <form action="/dashboard/services" method="GET" className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-end gap-2 sm:grid-cols-[auto_minmax(190px,1fr)_auto] lg:w-auto lg:flex-1 lg:max-w-[560px]">
-                {query.trim() && <input type="hidden" name="q" value={query.trim()} />}
-                {status !== "all" && <input type="hidden" name="status" value={status} />}
-                <label htmlFor="services-sort" className="col-span-2 inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-500 sm:col-span-1"><ArrowUpDown className="h-4 w-4" /> Sort</label>
-                <select id="services-sort" name="sort" defaultValue={sort} className="h-11 w-full min-w-0 rounded-xl border border-black/[0.07] bg-white px-3 text-xs font-semibold text-neutral-700 outline-none focus:border-blue-500">
-                  <option value="urgency">Urgency (recommended)</option>
-                  <option value="collection">Collection soonest</option>
-                  <option value="express">Express first</option>
-                  <option value="newest">Newest first</option>
-                </select>
-                <button type="submit" className="h-11 whitespace-nowrap rounded-xl bg-blue-800 px-4 text-xs font-semibold text-white hover:bg-blue-900">Apply</button>
-              </form>
-
-              {/* Filters */}
-
-              <div className="flex gap-2 overflow-x-auto">
-
-                <FilterLink
-                  href={buildFilterUrl(
-                    "all",
-                    query,
-                    sort,
-                  )}
-                  active={
-                    status === "all"
-                  }
-                >
-                  All
-                </FilterLink>
-
-
-                <FilterLink
-                  href={buildFilterUrl(
-                    "pending",
-                    query,
-                    sort,
-                  )}
-                  active={
-                    status === "pending"
-                  }
-                >
-                  Pending
-                </FilterLink>
-
-
-                <FilterLink
-                  href={buildFilterUrl(
-                    "ready_for_collection",
-                    query,
-                    sort,
-                  )}
-                  active={
-                    status ===
-                    "ready_for_collection"
-                  }
-                >
-                  Ready
-                </FilterLink>
-
-
-                <FilterLink
-                  href={buildFilterUrl(
-                    "collected",
-                    query,
-                    sort,
-                  )}
-                  active={
-                    status === "collected"
-                  }
-                >
-                  Collected
-                </FilterLink>
-
-              </div>
-
-            </div>
-
-
-            {/* Active search */}
-
-            {(query.trim() ||
-              status !== "all") && (
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-
-                <span className="text-[11px] text-neutral-400">
-                  Showing
-                </span>
-
-
-                {query.trim() && (
-                  <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-[10px] font-medium text-neutral-600">
-                    Search: {query}
-                  </span>
-                )}
-
-
-                {status !== "all" && (
-                  <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-[10px] font-medium text-neutral-600">
-                    Status:{" "}
-                    {getStatusLabel(
-                      status,
-                    )}
-                  </span>
-                )}
-
-
-                <Link
-                  href={sort === "urgency" ? "/dashboard/services" : `/dashboard/services?sort=${sort}`}
-                  className="ml-1 text-[11px] font-medium text-neutral-500 underline-offset-2 transition hover:text-neutral-950 hover:underline"
-                >
-                  Clear filters
-                </Link>
-
-              </div>
-            )}
-
-          </div>
+          <ServicesControls
+            key={`${query}|${status}|${sort}`}
+            query={query}
+            status={status}
+            sort={sort}
+          />
 
 
           {/* ==================================================
@@ -597,7 +406,7 @@ export default async function ServicesPage({
                   </thead>
 
 
-                  <tbody>
+                  <tbody className="odancia-stagger">
 
                     {services.map(
                       (service) => (
@@ -620,7 +429,7 @@ export default async function ServicesPage({
                   MOBILE
               ================================================== */}
 
-              <div className="grid gap-3 p-3 sm:grid-cols-2 xl:hidden">
+              <div className="odancia-stagger grid gap-3 p-3 sm:grid-cols-2 xl:hidden">
 
                 {services.map(
                   (service) => (
@@ -714,34 +523,6 @@ function buildSummary(
 
 
 /* ============================================================
-   FILTER LINK
-============================================================ */
-
-function FilterLink({
-  href,
-  active,
-  children,
-}: {
-  href: string;
-  active: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <Link
-      href={href}
-      className={`shrink-0 rounded-xl border px-4 py-2.5 text-xs font-medium transition ${
-        active
-          ? "border-neutral-950 bg-blue-800 text-white"
-          : "border-black/[0.07] bg-white text-neutral-600 hover:bg-neutral-50"
-      }`}
-    >
-      {children}
-    </Link>
-  );
-}
-
-
-/* ============================================================
    QUICK STAT
 ============================================================ */
 
@@ -760,7 +541,7 @@ function QuickStat({
 }) {
   return (
     <div
-      className={`rounded-2xl border px-5 py-4 transition ${
+      className={`odancia-interactive-card rounded-2xl border px-5 py-4 transition ${
         emphasis
           ? "border-neutral-950 bg-blue-800 text-white"
           : "border-black/[0.06] bg-white"
@@ -888,7 +669,7 @@ function paymentMethodLabel(method: string) {
 function ServiceRow({ service, asOf }: { service: LaundryService; asOf: number }) {
   const href = `/dashboard/services/${service.id}`;
   return (
-    <tr className="group border-b border-black/[0.05] transition-colors hover:bg-blue-50/60 active:bg-blue-50">
+    <tr className="odancia-service-row group border-b border-black/[0.05] transition-colors hover:bg-blue-50/60 active:bg-blue-50">
       <td className="px-5 py-4 align-top">
         <ServiceCellLink href={href}>
           <div className="font-semibold text-neutral-950">
@@ -962,7 +743,7 @@ function ServiceCard({ service, asOf }: { service: LaundryService; asOf: number 
     <Link
       href={`/dashboard/services/${service.id}`}
       aria-label={`Open service ${service.service_number ?? shortServiceId(service.id)} for ${service.client_name}`}
-      className="group block min-h-full rounded-2xl border border-neutral-200/80 bg-white p-4 shadow-sm outline-none transition hover:border-blue-200 hover:shadow-md focus-visible:ring-2 focus-visible:ring-blue-500 active:scale-[0.995] sm:p-5"
+      className="odancia-interactive-card group block min-h-full rounded-2xl border border-neutral-200/80 bg-white p-4 shadow-sm outline-none transition hover:border-blue-200 hover:shadow-md focus-visible:ring-2 focus-visible:ring-blue-500 active:scale-[0.995] sm:p-5"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
@@ -1157,32 +938,6 @@ function EmptyState() {
 
     </div>
   );
-}
-
-
-/* ============================================================
-   STATUS LABEL
-============================================================ */
-
-function getStatusLabel(
-  status: Exclude<
-    ServiceStatusFilter,
-    "all"
-  >,
-) {
-  switch (status) {
-    case "pending":
-      return "Pending";
-
-    case "ready_for_collection":
-      return "Ready";
-
-    case "collected":
-      return "Collected";
-
-    default:
-      return "All";
-  }
 }
 
 

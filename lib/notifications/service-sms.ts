@@ -66,15 +66,17 @@ const from =
   process.env.TWILIO_PHONE_NUMBER?.trim();
 
 /*
- * Keep this false while testing the Twilio trial account.
- *
- * When the account is upgraded and custom SMS is enabled:
- *
- * TWILIO_TRIAL_MODE=false
+ * Optional diagnostic flag for log entries only. It does not change the
+ * message body. Twilio trial accounts can have recipient-verification and
+ * destination restrictions; check the Twilio Console for the current account.
  */
+const trialMode = process.env.TWILIO_TRIAL_MODE === "true";
 
-const trialMode =
-  process.env.TWILIO_TRIAL_MODE === "true";
+// Optional operator-configurable messages. If unset, the branded defaults
+// below are used. The template editor intentionally stays in .env.local so
+// this simple SMS fallback requires no database migration or new dependency.
+const newServiceTemplate = process.env.TWILIO_NEW_SERVICE_SMS_TEMPLATE?.trim();
+const readyForCollectionTemplate = process.env.TWILIO_READY_FOR_COLLECTION_SMS_TEMPLATE?.trim();
 
 /* ============================================================
    TWILIO CLIENT
@@ -105,63 +107,47 @@ function getTwilioClient() {
    PHONE NORMALIZATION
 ============================================================ */
 
-function normalizeSouthAfricanPhone(
-  phone: string,
-): string | null {
-  const cleaned =
-    phone
-      .trim()
-      .replace(/[^\d+]/g, "");
+function normalizePhoneNumber(phone: string): string | null {
+  // Twilio expects E.164. Accept international numbers entered with +country
+  // code, international 00 prefix, or South African domestic format.
+  const compact = phone.trim().replace(/[\s().-]/g, "");
+  if (!compact || !/^\+?\d+$/.test(compact)) return null;
 
-  if (!cleaned) {
-    return null;
+  let international = compact;
+  if (international.startsWith("00")) {
+    international = `+${international.slice(2)}`;
   }
 
-  /*
-   * Already international.
-   */
-
-  if (cleaned.startsWith("+27")) {
-    const digits =
-      cleaned.slice(1);
-
-    if (
-      digits.length === 11 &&
-      digits.startsWith("27")
-    ) {
-      return `+${digits}`;
-    }
-
-    return null;
+  if (international.startsWith("+")) {
+    return /^\+[1-9]\d{7,14}$/.test(international)
+      ? international
+      : null;
   }
 
-  /*
-   * South African local format:
-   *
-   * 0712345678
-   */
-
-  if (
-    cleaned.length === 10 &&
-    cleaned.startsWith("0")
-  ) {
-    return `+27${cleaned.slice(1)}`;
+  const digits = international.replace(/\D/g, "");
+  // South African local format: 0712345678 -> +27712345678.
+  if (/^0\d{9}$/.test(digits)) {
+    return `+27${digits.slice(1)}`;
+  }
+  // South African country code without plus: 27712345678 -> +27712345678.
+  if (/^27\d{9}$/.test(digits)) {
+    return `+${digits}`;
   }
 
-  /*
-   * Sometimes users enter:
-   *
-   * 27123456789
-   */
-
-  if (
-    cleaned.length === 11 &&
-    cleaned.startsWith("27")
-  ) {
-    return `+${cleaned}`;
-  }
-
+  // For other countries, require callers to include + or 00 so the country
+  // code is never guessed incorrectly.
   return null;
+}
+
+/** Replace {{placeholder}} values in an optional environment-defined SMS. */
+function renderCustomSmsTemplate(
+  template: string,
+  values: Record<string, string>,
+): string {
+  return template
+    .replace(/\\n/g, "\n")
+    .replace(/\{\{\s*([a-zA-Z][a-zA-Z0-9]*)\s*\}\}/g, (_match, key: string) => values[key] ?? "")
+    .trim();
 }
 
 /* ============================================================
@@ -274,7 +260,7 @@ async function sendSms({
    */
 
   const to =
-    normalizeSouthAfricanPhone(phone);
+    normalizePhoneNumber(phone);
 
   if (!to) {
     console.warn(
@@ -290,25 +276,10 @@ async function sendSms({
     };
   }
 
-  /*
-   * ----------------------------------------------------------
-   * MESSAGE BODY
-   * ----------------------------------------------------------
-   *
-   * IMPORTANT:
-   *
-   * Trial accounts can only send Twilio's predefined
-   * trial templates.
-   *
-   * Once the account is upgraded, set:
-   *
-   * TWILIO_TRIAL_MODE=false
-   *
-   * and the actual Odancia Laundry message will be sent.
-   */
-
-   //   const messageBody = trialMode    ? "sms_appointment_reminders"     : body;
-    const messageBody = body;
+  // This is an ordinary Twilio SMS body (not a Meta/WhatsApp template).
+  // Twilio trial accounts may only deliver to verified recipients and may have
+  // other destination restrictions; those restrictions are enforced by Twilio.
+  const messageBody = body;
 
   /*
    * ----------------------------------------------------------
@@ -379,63 +350,58 @@ export async function sendNewServiceSms({
   amountPaid,
   balance,
 }: NewServiceSmsParams): Promise<SmsResult> {
-  const reference =
-    serviceReference(
-      serviceId,
-    );
+  const reference = serviceReference(serviceId);
+  const fulfillment = fulfillmentMethod === "delivery" ? "Delivery" : "Customer collection";
+  const itemLine = numberOfItems
+    ? `${numberOfItems} item${numberOfItems === 1 ? "" : "s"}`
+    : "Not specified";
+  const formattedCollectionDate = formatDate(collectionDate);
+  const formattedCollectionTime = collectionTime ? formatSmsClockTime(collectionTime) : "Not recorded";
 
-  const fulfillment =
-    fulfillmentMethod ===
-    "delivery"
-      ? "Delivery"
-      : "Customer collection";
-
-  const itemLine =
-    numberOfItems
-      ? `${numberOfItems} item${
-          numberOfItems === 1
-            ? ""
-            : "s"
-        }`
-      : null;
-
-  const body = [
-    `ODANCIA LAUNDRY`,
-    ``,
+  const defaultBody = [
+    "ODANCIA LAUNDRY",
+    "",
     `Hi ${customerName},`,
-    ``,
-    `Your laundry service has been successfully booked.`,
-    ``,
-    `SERVICE`,
-    `${serviceName}`,
-    serviceDescription
-      ? serviceDescription
-      : null,
-    ``,
+    "",
+    "Your laundry service has been successfully booked.",
+    "",
+    "SERVICE",
+    serviceName || "Laundry Service",
+    serviceDescription || null,
+    "",
     `REF ${reference}`,
     `Received: ${formatDate(serviceDate)}`,
-    `Collection: ${formatDate(collectionDate)}${collectionTime ? ` at ${formatSmsClockTime(collectionTime)}` : ""}`,
-    itemLine,
+    `Collection: ${formattedCollectionDate}${collectionTime ? ` at ${formattedCollectionTime}` : " (time not recorded)"}`,
+    itemLine !== "Not specified" ? itemLine : null,
     `Method: ${fulfillment}`,
-    ``,
+    "",
     `TOTAL ${formatMoney(totalPrice)}`,
     `PAID ${formatMoney(amountPaid)}`,
     `BALANCE ${formatMoney(balance)}`,
-    ``,
-    `Thank you for choosing Odancia Laundry.`,
-  ]
-    .filter(
-      (
-        value,
-      ): value is string =>
-        value !== null,
-    )
-    .join("\n");
+    "",
+    "Thank you for choosing Odancia Laundry.",
+  ].filter((value): value is string => value !== null).join("\n");
 
-  return sendSms({
-    phone,
-    body,
-  });
+  const body = newServiceTemplate
+    ? renderCustomSmsTemplate(newServiceTemplate, {
+        businessName: "Odancia Laundry",
+        customerName,
+        serviceName: serviceName || "Laundry Service",
+        serviceDescription: serviceDescription || "",
+        serviceReference: reference,
+        serviceDate: formatDate(serviceDate),
+        collectionDate: formattedCollectionDate,
+        collectionTime: formattedCollectionTime,
+        numberOfItems: itemLine,
+        fulfillmentMethod: fulfillment,
+        totalPrice: formatMoney(totalPrice),
+        amountPaid: formatMoney(amountPaid),
+        balance: formatMoney(balance),
+        balanceMessage: balance > 0 ? "An outstanding balance remains." : "Paid in full.",
+      })
+    : defaultBody;
+
+  return sendSms({ phone, body });
 }
 
 /* ============================================================
@@ -456,66 +422,61 @@ export async function sendReadyForCollectionSms({
   amountPaid,
   balance,
 }: ReadyForCollectionSmsParams): Promise<SmsResult> {
-  const reference =
-    serviceReference(
-      serviceId,
-    );
+  const reference = serviceReference(serviceId);
+  const fulfillment = fulfillmentMethod === "delivery" ? "Delivery" : "Customer collection";
+  const itemLine = numberOfItems
+    ? `${numberOfItems} item${numberOfItems === 1 ? "" : "s"}`
+    : "Not specified";
+  const formattedCollectionDate = formatDate(collectionDate);
+  const formattedCollectionTime = collectionTime ? formatSmsClockTime(collectionTime) : "Not recorded";
+  const balanceMessage = balance > 0
+    ? "Please settle the outstanding balance when collecting."
+    : "Your service has been fully paid.";
 
-  const fulfillment =
-    fulfillmentMethod ===
-    "delivery"
-      ? "Delivery"
-      : "Customer collection";
-
-  const itemLine =
-    numberOfItems
-      ? `${numberOfItems} item${
-          numberOfItems === 1
-            ? ""
-            : "s"
-        }`
-      : null;
-
-  const body = [
-    `ODANCIA LAUNDRY`,
-    ``,
-    `READY FOR COLLECTION`,
-    ``,
+  const defaultBody = [
+    "ODANCIA LAUNDRY",
+    "",
+    "READY FOR COLLECTION",
+    "",
     `Hi ${customerName},`,
-    ``,
-    `Your laundry is ready.`,
-    ``,
-    `SERVICE`,
-    `${serviceName}`,
-    serviceDescription
-      ? serviceDescription
-      : null,
-    ``,
+    "",
+    "Your laundry is ready.",
+    "",
+    "SERVICE",
+    serviceName || "Laundry Service",
+    serviceDescription || null,
+    "",
     `REF ${reference}`,
-    `Collection: ${formatDate(collectionDate)}${collectionTime ? ` at ${formatSmsClockTime(collectionTime)}` : ""}`,
-    itemLine,
+    `Collection: ${formattedCollectionDate}${collectionTime ? ` at ${formattedCollectionTime}` : " (time not recorded)"}`,
+    itemLine !== "Not specified" ? itemLine : null,
     `Method: ${fulfillment}`,
-    ``,
+    "",
     `TOTAL ${formatMoney(totalPrice)}`,
     `PAID ${formatMoney(amountPaid)}`,
     `BALANCE ${formatMoney(balance)}`,
-    ``,
-    balance > 0
-      ? `Please settle the outstanding balance when collecting.`
-      : `Your service has been fully paid.`,
-    ``,
-    `Thank you for choosing Odancia Laundry.`,
-  ]
-    .filter(
-      (
-        value,
-      ): value is string =>
-        value !== null,
-    )
-    .join("\n");
+    "",
+    balanceMessage,
+    "",
+    "Thank you for choosing Odancia Laundry.",
+  ].filter((value): value is string => value !== null).join("\n");
 
-  return sendSms({
-    phone,
-    body,
-  });
+  const body = readyForCollectionTemplate
+    ? renderCustomSmsTemplate(readyForCollectionTemplate, {
+        businessName: "Odancia Laundry",
+        customerName,
+        serviceName: serviceName || "Laundry Service",
+        serviceDescription: serviceDescription || "",
+        serviceReference: reference,
+        collectionDate: formattedCollectionDate,
+        collectionTime: formattedCollectionTime,
+        numberOfItems: itemLine,
+        fulfillmentMethod: fulfillment,
+        totalPrice: formatMoney(totalPrice),
+        amountPaid: formatMoney(amountPaid),
+        balance: formatMoney(balance),
+        balanceMessage,
+      })
+    : defaultBody;
+
+  return sendSms({ phone, body });
 }

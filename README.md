@@ -46,3 +46,22 @@ Phase 9 fixes the reported ESLint and TypeScript issues, adds the missing SMS ti
 ## Phase 10 TypeScript hotfix
 
 For the latest targeted importer nullability and SMS collection-time formatter fix, see `PHASE10-TYPESCRIPT-HOTFIX.md`. Extract the latest ZIP into a new folder rather than overlaying it on an older copy; copy only your private environment files (`.env.local` / `.env`) into the new folder.
+
+
+## Phase 11 restored — Twilio custom SMS
+
+This build is based on Phase 11 and intentionally excludes the Phase 12 Meta WhatsApp and phone-input package changes that caused `Can't resolve 'react-phone-number-input/style.css'`. Twilio sends ordinary custom SMS messages when a service is created and when its status changes to `ready_for_collection`.
+
+See `TWILIO-CUSTOM-SMS.md` and `.env.twilio.example` for credential setup and optional configurable message bodies. No additional database migration is required. Customer phone fields remain dependency-free; enter overseas numbers with `+` and the country calling code. Standard SMS cannot contain the logo/PDF attachment itself.
+
+
+## Phase 13 — service detail and responsive performance polish
+
+- Service details now show collection date and collection time directly in the Laundry service details grid, next to the service date/time fields.
+- The Services toolbar uses optimistic controls for status/search/sort navigation so selection feedback is immediate while server-rendered results are updating.
+- The dashboard streams the staff attendance section behind Suspense; the existing `loading.tsx` shimmer fallbacks remain active for service routes.
+- Dashboard routes and service cards use lightweight CSS motion with reduced-motion handling.
+- Login is vertically and horizontally centered in the viewport and uses compact responsive sizing for short mobile/tablet viewports.
+- No new dependency or Supabase migration is required. Next.js 16 has removed the experimental PPR configuration flag; this update uses supported React Suspense/Next.js streaming instead of an unavailable flag.
+
+See `PHASE13-UI-PERFORMANCE.md` for the details and manual test checklist.

@@ -58,10 +58,11 @@ export default function ClientCreateForm() {
             label="Phone number"
             name="phone"
             type="tel"
-            placeholder="e.g. +27 74 123 4567"
+            placeholder="e.g. +27 74 123 4567 or +44 20 1234 5678"
             icon={<Phone className="h-3.5 w-3.5" />}
             required
             autoComplete="tel"
+            help="For overseas clients, include the + sign and country calling code (for example, +44)."
           />
 
           <Field
@@ -121,6 +122,7 @@ function Field({
   icon,
   required = false,
   autoComplete,
+  help,
 }: {
   label: string;
   name: string;
@@ -129,6 +131,7 @@ function Field({
   icon: React.ReactNode;
   required?: boolean;
   autoComplete?: string;
+  help?: string;
 }) {
   return (
     <div className="space-y-2">
@@ -162,6 +165,7 @@ function Field({
           className="h-11 w-full rounded-xl border border-black/[0.07] bg-neutral-50 pl-9 pr-3 text-xs text-neutral-950 outline-none transition placeholder:text-neutral-400 focus:border-neutral-300 focus:bg-white"
         />
       </div>
+      {help ? <p className="text-[11px] leading-4 text-neutral-500">{help}</p> : null}
     </div>
   );
 }

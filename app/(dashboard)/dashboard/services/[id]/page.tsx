@@ -324,6 +324,28 @@ export default async function ServiceDetailsPage({
                   }
                 />
 
+                <DetailBlock
+                  label="Collection date"
+                  value={
+                    service.collection_date
+                      ? formatDate(service.collection_date)
+                      : "Not recorded"
+                  }
+                  icon={<CalendarDays className="h-3.5 w-3.5" />}
+                  tone="blue"
+                />
+
+                <DetailBlock
+                  label="Collection time"
+                  value={
+                    service.collection_time
+                      ? formatTime(service.collection_time)
+                      : "Not recorded"
+                  }
+                  icon={<Clock3 className="h-3.5 w-3.5" />}
+                  tone="red"
+                />
+
               </div>
 
             </section>
@@ -589,19 +611,23 @@ function DetailBlock({
   label,
   value,
   icon,
+  tone = "default",
 }: {
   label: string;
   value: string;
   icon?: React.ReactNode;
+  tone?: "default" | "blue" | "red";
 }) {
+  const labelTone = tone === "red" ? "text-red-700" : tone === "blue" ? "text-blue-800" : "text-neutral-400";
+  const valueTone = tone === "red" ? "text-red-800" : tone === "blue" ? "text-blue-950" : "text-neutral-900";
   return (
     <div className="bg-white p-5">
 
-      <p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-neutral-400">
+      <p className={`text-[10px] font-semibold uppercase tracking-[0.13em] ${labelTone}`}>
         {label}
       </p>
 
-      <p className="mt-2 flex items-center gap-1.5 text-sm font-medium text-neutral-900">
+      <p className={`mt-2 flex items-center gap-1.5 text-sm font-semibold ${valueTone}`}>
         {icon && (
           <span className="text-neutral-400">
             {icon}

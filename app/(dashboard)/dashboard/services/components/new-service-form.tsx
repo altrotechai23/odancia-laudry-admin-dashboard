@@ -822,12 +822,15 @@ export default function NewServiceForm({
                           event.target.value,
                         )
                       }
-                      placeholder="+27 71 234 5678"
+                      placeholder="+27 71 234 5678 or +44 20 1234 5678"
                       className={`${inputClassName} pl-11`}
                       autoComplete="tel"
                       required
                     />
                   </div>
+                  <p className="mt-1.5 text-[11px] leading-4 text-neutral-500">
+                    For overseas clients, include + and the country calling code (e.g. +44).
+                  </p>
                 </div>
 
 
