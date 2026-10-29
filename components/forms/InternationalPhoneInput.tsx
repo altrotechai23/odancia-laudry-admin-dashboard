@@ -1,6 +1,6 @@
 "use client";
 
-import PhoneInput from "react-phone-number-input";
+import PhoneInput, { type Value } from "react-phone-number-input";
 
 type InternationalPhoneInputProps = {
   id: string;
@@ -13,8 +13,9 @@ type InternationalPhoneInputProps = {
 };
 
 /**
- * International phone entry. The library handles country calling codes,
- * national formatting and E.164 output, while defaulting new customers to ZA.
+ * International phone entry.
+ * Handles country calling codes, national formatting and E.164 output,
+ * while defaulting new customers to South Africa.
  */
 export default function InternationalPhoneInput({
   id,
@@ -32,8 +33,8 @@ export default function InternationalPhoneInput({
       international
       withCountryCallingCode
       countryCallingCodeEditable={false}
-      value={value || undefined}
-      onChange={(nextValue) => onChange(nextValue ?? "")}
+      value={value ? (value as Value) : undefined}
+      onChange={(nextValue: Value | undefined) => onChange(nextValue ?? "")}
       required={required}
       disabled={disabled}
       autoComplete={autoComplete}
