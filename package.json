@@ -17,7 +17,9 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "twilio": "^6.1.0",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "libphonenumber-js": "^1.12.29",
+    "react-phone-number-input": "^3.4.14"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

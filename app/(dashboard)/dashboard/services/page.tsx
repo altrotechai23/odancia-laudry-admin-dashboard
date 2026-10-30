@@ -9,6 +9,7 @@ import {
   Clock3,
   Package,
   Plus,
+  Search,
   Truck,
   UserRound,
 } from "lucide-react";
