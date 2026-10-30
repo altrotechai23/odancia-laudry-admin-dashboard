@@ -5,9 +5,13 @@ import { ArrowRight, Banknote, BriefcaseBusiness, ChartNoAxesCombined, CircleDol
 import { requireUser } from "@/lib/auth/get-current-user";
 import { getServices, type LaundryService } from "@/lib/services/get-services";
 import ReportRange from "./ReportRange";
+import ServiceActivityChart from "./ServiceActivityChart";
 
 type Props = { searchParams: Promise<{ range?: string }> };
 const money = (value: number) => new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR", maximumFractionDigits: 2 }).format(value);
+function reportCutoff(range: string) {
+  return range === "all" ? 0 : Date.now() - Number(range) * 24 * 60 * 60 * 1000;
+}
 const dateLabel = (value: string) => new Date(value).toLocaleDateString("en-ZA", { day: "numeric", month: "short", year: "numeric", timeZone: "Africa/Johannesburg" });
 export default async function ReportsPage({ searchParams }: Props) {
   const profile = await requireUser();
@@ -26,7 +30,7 @@ export default async function ReportsPage({ searchParams }: Props) {
 }
 async function ReportsBody({ range }: { range: string }) {
   const { services } = await getServices();
-  const cutoff = range === "all" ? 0 : Date.now() - Number(range) * 24 * 60 * 60 * 1000;
+  const cutoff = reportCutoff(range);
   const rows = services.filter((s) => Date.parse(s.created_at) >= cutoff).sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at));
   const serviceValue = rows.reduce((sum,s)=>sum+s.price,0);
   const received = rows.reduce((sum,s)=>sum+s.amount_paid,0);
@@ -35,12 +39,11 @@ async function ReportsBody({ range }: { range: string }) {
   const pending = rows.filter((s)=>s.service_status === "pending").length;
   const ready = rows.filter((s)=>s.service_status === "ready_for_collection").length;
   const avg = rows.length ? serviceValue / rows.length : 0;
-  const maxCount = Math.max(1, pending, ready, completed);
   const daily = Array.from({length: 7}, (_, index) => {
     const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() - (6-index));
     const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-    const count = rows.filter((s)=>s.created_at.slice(0,10)===key).length;
-    return { label: d.toLocaleDateString("en-ZA",{weekday:"short"}), count };
+    const dayServices = rows.filter((s)=>s.created_at.slice(0,10)===key);
+    return { key, label: d.toLocaleDateString("en-ZA",{weekday:"short"}), count: dayServices.length, services: dayServices.map(s => ({ id:s.id, service_number:s.service_number, client_name:s.client_name, service_status:s.service_status, price:s.price, created_at:s.created_at })) };
   });
   return <div className="mt-7 space-y-5">
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -52,8 +55,7 @@ async function ReportsBody({ range }: { range: string }) {
     <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
       <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
         <div className="flex items-start justify-between gap-3"><div><h2 className="text-base font-semibold text-slate-950">Service activity</h2><p className="mt-1 text-xs text-slate-500">New services over the last seven days</p></div><span className="rounded-xl bg-blue-50 p-2.5 text-blue-800"><ChartNoAxesCombined className="h-5 w-5"/></span></div>
-        <div className="mt-7 flex h-44 items-end gap-3 sm:gap-5" role="img" aria-label="Bar chart of new services for the last seven days">{daily.map((day)=><div key={day.label} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-2"><span className="text-xs font-semibold text-slate-700">{day.count}</span><div className="flex w-full max-w-12 flex-1 items-end overflow-hidden rounded-t-xl bg-slate-100"><div className="w-full rounded-t-xl bg-gradient-to-t from-blue-800 to-blue-500 transition-all duration-500" style={{height:`${Math.max(day.count ? 12 : 3, day.count / Math.max(1,...daily.map(d=>d.count))*100)}%`}}/></div><span className="text-[11px] text-slate-500">{day.label}</span></div>)}</div>
-        <p className="mt-4 text-[11px] text-slate-400">Daily counts are based on service creation date.</p>
+        <ServiceActivityChart days={daily}/>
       </section>
       <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6"><div className="flex items-start justify-between"><div><h2 className="text-base font-semibold text-slate-950">Service status</h2><p className="mt-1 text-xs text-slate-500">Current status of services in the selected period</p></div><PackageCheck className="h-5 w-5 text-slate-400"/></div>
         <div className="mt-6 space-y-5"><StatusRow label="Pending" count={pending} total={rows.length} color="bg-amber-400"/><StatusRow label="Ready for collection" count={ready} total={rows.length} color="bg-blue-600"/><StatusRow label="Collected" count={completed} total={rows.length} color="bg-emerald-500"/></div>

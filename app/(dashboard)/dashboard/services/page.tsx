@@ -191,6 +191,21 @@ export default async function ServicesPage({
 
 
   /* ==========================================================
+     URGENCY VIEW: hide services whose collection date is before
+     today's local date. Today starts at 00:00 Africa/Johannesburg.
+  ========================================================== */
+
+  if (sort === "urgency") {
+    const todayLocal = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Africa/Johannesburg",
+      year: "numeric", month: "2-digit", day: "2-digit",
+    }).format(new Date());
+    services = services.filter((service) =>
+      !service.collection_date || service.collection_date >= todayLocal
+    );
+  }
+
+  /* ==========================================================
      STATUS FILTER
   ========================================================== */
 

@@ -28,7 +28,6 @@ export default function ServicesControls({ query, status, sort }: { query: strin
   const [searchDraft, setSearchDraft] = useState(query);
   const [sortDraft, setSortDraft] = useState<ServiceSort>(sort);
   const [statusDraft, setStatusDraft] = useState<ServiceStatusFilter>(status);
-  useEffect(() => { setSearchDraft(query); setSortDraft(sort); setStatusDraft(status); }, [query, sort, status]);
   function navigate(next: Filters) { startTransition(() => router.push(buildUrl(next), { scroll: false })); }
   useEffect(() => {
     const timer = window.setTimeout(() => {

@@ -4,7 +4,6 @@ import {
   ArrowLeft,
   Banknote,
   CalendarDays,
-  CheckCircle2,
   Clock3,
   Mail,
   Package,

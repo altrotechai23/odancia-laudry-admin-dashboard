@@ -320,44 +320,17 @@ function ClientRow({
   client: Client;
 }) {
   return (
-    <div className="px-5 py-4 transition hover:bg-neutral-50/60 sm:px-6">
-
-      {/* DESKTOP */}
-
-      <div className="hidden grid-cols-[minmax(240px,1fr)_190px_minmax(220px,1fr)_100px] items-center gap-4 sm:grid">
-
+    <div className="group relative px-5 py-4 transition hover:bg-blue-50/40 sm:px-6">
+      <Link href={`/dashboard/clients/${client.id}`} aria-label={`Open client ${client.full_name}`} className="absolute inset-0 z-0 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-600" />
+      <div className="pointer-events-none relative z-10 hidden grid-cols-[minmax(240px,1fr)_190px_minmax(220px,1fr)_100px] items-center gap-4 sm:grid">
         <ClientIdentity client={client} />
-
         <ContactPhone phone={client.phone} />
-
         <ContactEmail email={client.email} />
-
-        <Link
-            href={`/dashboard/clients/${client.id}`}
-            className="inline-flex h-9 items-center justify-center rounded-xl border border-black/[0.07] bg-white px-3 text-[11px] font-semibold text-neutral-700 transition hover:bg-neutral-50 hover:text-neutral-950"
-            >
-            View
-        </Link>
+        <span className="inline-flex h-9 items-center justify-center rounded-xl border border-black/[0.07] bg-white px-3 text-[11px] font-semibold text-neutral-700 transition group-hover:border-blue-200 group-hover:text-blue-800">View <span className="ml-1" aria-hidden="true">↗</span></span>
       </div>
-
-      {/* MOBILE */}
-
-      <div className="sm:hidden">
-        <div className="flex items-start justify-between gap-4">
-          <ClientIdentity client={client} />
-
-          <Link
-  href={`/dashboard/clients/${client.id}`}
-  className="shrink-0 text-xs font-semibold text-neutral-500 transition hover:text-neutral-950"
->
-  View
-</Link>
-        </div>
-
-        <div className="mt-4 space-y-2">
-          <ContactPhone phone={client.phone} />
-          <ContactEmail email={client.email} />
-        </div>
+      <div className="pointer-events-none relative z-10 sm:hidden">
+        <div className="flex items-start justify-between gap-4"><ClientIdentity client={client}/><span className="shrink-0 text-xs font-semibold text-blue-700">Open ↗</span></div>
+        <div className="mt-4 space-y-2"><ContactPhone phone={client.phone}/><ContactEmail email={client.email}/></div>
       </div>
     </div>
   );
@@ -412,7 +385,7 @@ function ContactPhone({
   return (
     <a
       href={`tel:${phone}`}
-      className="inline-flex max-w-full items-center gap-1.5 text-[11px] text-neutral-500 transition hover:text-neutral-950"
+      className="pointer-events-auto relative z-20 inline-flex max-w-full items-center gap-1.5 text-[11px] text-neutral-500 transition hover:text-neutral-950"
     >
       <Phone className="h-3 w-3 shrink-0" />
 
@@ -444,7 +417,7 @@ function ContactEmail({
   return (
     <a
       href={`mailto:${email}`}
-      className="inline-flex max-w-full items-center gap-1.5 text-[11px] text-neutral-500 transition hover:text-neutral-950"
+      className="pointer-events-auto relative z-20 inline-flex max-w-full items-center gap-1.5 text-[11px] text-neutral-500 transition hover:text-neutral-950"
     >
       <Mail className="h-3 w-3 shrink-0" />
 
