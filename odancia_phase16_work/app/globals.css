@@ -1,0 +1,184 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f4f8fc;
+  --foreground: #101828;
+  --muted: #64748b;
+  --border: #e2eaf3;
+  --surface: #ffffff;
+  --surface-secondary: #edf4fb;
+  --odancia-blue: #0b4f91;
+  --odancia-blue-deep: #073765;
+  --odancia-red: #e31b36;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  background: var(--background);
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background:
+    radial-gradient(circle at top right, rgba(219, 234, 254, 0.58), transparent 34rem),
+    radial-gradient(circle at bottom left, rgba(254, 226, 226, 0.36), transparent 30rem),
+    var(--background);
+  color: var(--foreground);
+  font-family:
+    Arial,
+    Helvetica,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+::selection {
+  background: var(--odancia-blue);
+  color: #ffffff;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c6d5e6;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--odancia-blue);
+}
+
+/* Lightweight shimmer for quick, stable navigation on iPad/tablet. */
+.odancia-shimmer {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background: #eaf0f7;
+  border-radius: 0.85rem;
+}
+
+.odancia-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.78), transparent);
+  animation: odancia-shimmer 1.25s ease-in-out infinite;
+}
+
+@keyframes odancia-shimmer {
+  100% { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .odancia-shimmer::after { animation: none; transform: none; opacity: 0.25; }
+  *, *::before, *::after { scroll-behavior: auto !important; }
+}
+
+/* iPad-sized controls: a comfortable touch target without inflating desktop. */
+@media (min-width: 640px) and (max-width: 1279px) {
+  button, select, input[type="button"], input[type="submit"] {
+    min-height: 2.75rem;
+  }
+}
+
+
+/* Lightweight page transitions and staggered entrance animations. These are CSS-only
+   to avoid adding client-side animation work to the dashboard's critical path. */
+.odancia-page-enter {
+  animation: odancia-page-enter 220ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
+}
+
+@keyframes odancia-page-enter {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.odancia-stagger > * {
+  animation: odancia-card-enter 260ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
+}
+
+.odancia-stagger > :nth-child(1) { animation-delay: 0ms; }
+.odancia-stagger > :nth-child(2) { animation-delay: 28ms; }
+.odancia-stagger > :nth-child(3) { animation-delay: 56ms; }
+.odancia-stagger > :nth-child(4) { animation-delay: 84ms; }
+.odancia-stagger > :nth-child(5) { animation-delay: 112ms; }
+.odancia-stagger > :nth-child(6) { animation-delay: 140ms; }
+
+@keyframes odancia-card-enter {
+  from { opacity: 0; transform: translateY(7px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.odancia-interactive-card {
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .odancia-interactive-card:hover { transform: translateY(-2px); }
+}
+
+.odancia-service-row { transition: background-color 140ms ease; }
+.odancia-service-row:focus-within { background-color: rgb(239 246 255 / 0.9); }
+
+@media (prefers-reduced-motion: reduce) {
+  .odancia-page-enter,
+  .odancia-stagger > *,
+  .odancia-interactive-card { animation: none !important; transition: none !important; }
+}
+
+
+/* Fit the branded login card inside short iPad/mobile viewports without a page scroll. */
+@media (max-height: 700px) {
+  .odancia-login-content { gap: 0.5rem; }
+  .odancia-login-logo { padding-top: 0.35rem; padding-bottom: 0.35rem; }
+  .odancia-login-logo img { max-height: 3.25rem; }
+  .odancia-login-card { padding: 0.875rem; }
+  .odancia-login-card > div:first-child { margin-bottom: 0.65rem; }
+  .odancia-login-card h1 { margin-top: 0.4rem; font-size: 1.45rem; }
+  .odancia-login-card form { gap: 0.6rem; }
+  .odancia-login-card form input { height: 2.5rem; }
+  .odancia-login-card form > p { font-size: 0.65rem; line-height: 1rem; }
+}
+
+@media (max-height: 570px) {
+  .odancia-login-screen { padding-top: 0.25rem; padding-bottom: 0.25rem; }
+  .odancia-login-content { gap: 0.35rem; }
+  .odancia-login-logo img { max-height: 2.25rem; }
+  .odancia-login-card { padding: 0.625rem; }
+  .odancia-login-card > div:first-child { margin-bottom: 0.4rem; }
+  .odancia-login-description,
+  .odancia-login-footer,
+  .odancia-login-card form > p { display: none; }
+  .odancia-login-card h1 { font-size: 1.25rem; }
+  .odancia-login-card form { gap: 0.45rem; }
+  .odancia-login-card form input { height: 2.25rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .odancia-interactive-card:hover { transform: none !important; }
+}

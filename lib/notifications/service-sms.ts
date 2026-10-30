@@ -319,16 +319,34 @@ async function sendSms({
       error,
     );
 
+    const twilioError = error as {
+      message?: string;
+      code?: number | string;
+      status?: number;
+      moreInfo?: string;
+    };
+    const code = twilioError?.code ? ` (Twilio ${twilioError.code})` : "";
+    const status = twilioError?.status ? ` HTTP ${twilioError.status}` : "";
+    const details = twilioError?.message || (error instanceof Error ? error.message : "Unable to send SMS.");
+    const actionableDetails = String(twilioError?.code) === "572006"
+      ? "Twilio is treating these credentials as a trial account (error 572006). Custom Odancia SMS messages require an upgraded Twilio project. In Twilio Console, confirm the project is upgraded and that TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN belong to that same upgraded project or account, not a trial project/subaccount. Update the deployment environment variables and redeploy."
+      : details;
+
     return {
       success: false,
       skipped: false,
       sid: null,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Unable to send SMS.",
+      error: `${actionableDetails}${code}${status}`,
     };
   }
+}
+
+/** Send a fixed, administrator-triggered diagnostic SMS. */
+export async function sendTwilioTestSms(phone: string): Promise<SmsResult> {
+  return sendSms({
+    phone,
+    body: "ODANCIA LAUNDRY: This is a test SMS. Your Twilio connection is able to submit messages.",
+  });
 }
 
 /* ============================================================

@@ -1,3 +1,7 @@
+## Phase 15 — Audit logging and Twilio diagnostics
+
+This version is based on the working Phase 14 build. Apply `supabase/migrations/202610290002_fix_audit_log_action_constraint.sql` in Supabase SQL Editor to allow the audit action values used by the application while preserving the existing constraint. For Twilio error 572006, verify the server-side credentials belong to the upgraded Twilio project; see `PHASE15-AUDIT-TWILIO-FIX.md`. The payment-stage fix is retained.
+
 # Odancia Laundry Admin Dashboard
 
 ## Current simplified workflow (Phase 4)
