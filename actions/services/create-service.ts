@@ -7,7 +7,7 @@ import { requireOwnerOrAdmin } from "@/lib/auth/get-current-user";
 import { createServiceSchema } from "@/lib/validations/service";
 import { authorizeStaffWrite, clearStaffWriteAuthorization, logStaffServiceOperation } from "@/lib/staff/security";
 
-import { sendNewServiceSms } from "@/lib/notifications/service-sms";
+import { sendNewServiceWhatsApp } from "@/lib/notifications/whatsapp";
 
 export type CreateServiceState = {
   success: boolean;
@@ -274,9 +274,9 @@ export async function createService(
 
     /*
      * ----------------------------------------------------------
-     * SMS
+     * WHATSAPP MESSAGE
      *
-     * SMS failure MUST NOT fail the service.
+     * Notification failure MUST NOT fail the service.
      * ----------------------------------------------------------
      */
 
@@ -289,8 +289,8 @@ export async function createService(
     );
 
     try {
-      const smsResult =
-        await sendNewServiceSms({
+      const whatsappResult =
+        await sendNewServiceWhatsApp({
           customerName: data.clientName,
 
           phone: data.phone,
@@ -324,15 +324,15 @@ export async function createService(
           balance,
         });
 
-      if (!smsResult.success) {
+      if (!whatsappResult.success) {
         console.warn(
-          "SERVICE SMS WAS NOT SENT:",
-          smsResult.error,
+          "SERVICE WHATSAPP MESSAGE WAS NOT SENT:",
+          whatsappResult.error,
         );
       } else {
         console.info(
-          "SERVICE SMS SENT:",
-          smsResult.sid,
+          "SERVICE WHATSAPP MESSAGE ACCEPTED:",
+          whatsappResult.sid,
         );
       }
 
@@ -342,13 +342,13 @@ export async function createService(
 
       return {
         success: true,
-        message: smsResult.success
-          ? "Service created and customer notified."
-          : "Service created successfully. Customer SMS could not be sent.",
+        message: whatsappResult.success
+          ? "Service created and WhatsApp message accepted by Meta."
+          : "Service created, but the WhatsApp message could not be sent.",
       };
     } catch (error) {
       console.error(
-        "SERVICE SMS UNEXPECTED ERROR:",
+        "SERVICE WHATSAPP UNEXPECTED ERROR:",
         error,
       );
 
@@ -359,7 +359,7 @@ export async function createService(
       return {
         success: true,
         message:
-          "Service created successfully. Customer SMS could not be sent.",
+          "Service created, but the WhatsApp message could not be sent.",
       };
     }
   } finally {

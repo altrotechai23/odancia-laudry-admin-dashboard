@@ -8,14 +8,25 @@ export default async function ShiftPage() {
 
   const [{ data: profiles, error: profilesError }, { data: shifts, error: shiftsError }] = await Promise.all([
     admin.from("profiles").select("id, full_name, phone, is_active, role").eq("role", "staff").order("full_name", { ascending: true }),
-    admin.from("staff_shifts").select("id, staff_id, checked_in_at").is("checked_out_at", null).order("checked_in_at", { ascending: true }),
+    admin.from("staff_shifts").select("id, staff_id, checked_in_at, checked_out_at").order("checked_in_at", { ascending: false }),
   ]);
 
   const setupError = Boolean(profilesError || shiftsError);
-  const shiftByStaff = new Map((shifts ?? []).map((shift) => [shift.staff_id, shift]));
+  // Rows are newest first, so the first record per staff member is their latest attendance.
+  const latestShiftByStaff = new Map<string, NonNullable<typeof shifts>[number]>();
+  for (const shift of shifts ?? []) {
+    if (!latestShiftByStaff.has(shift.staff_id)) latestShiftByStaff.set(shift.staff_id, shift);
+  }
   const team = (profiles ?? [])
-    .filter((member) => member.is_active || shiftByStaff.has(member.id))
-    .map((member) => ({ ...member, shift: shiftByStaff.get(member.id) ?? null }));
+    .filter((member) => member.is_active || latestShiftByStaff.has(member.id))
+    .map((member) => {
+      const latestShift = latestShiftByStaff.get(member.id) ?? null;
+      return {
+        ...member,
+        shift: latestShift && !latestShift.checked_out_at ? latestShift : null,
+        lastAttendance: latestShift,
+      };
+    });
   const onDuty = team.filter((member) => Boolean(member.shift)).length;
 
   return (

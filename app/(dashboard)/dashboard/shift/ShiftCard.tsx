@@ -11,7 +11,8 @@ type StaffShiftMember = {
   phone: string | null;
   is_active: boolean;
   role: string;
-  shift: { id: string; staff_id: string; checked_in_at: string } | null;
+  shift: { id: string; staff_id: string; checked_in_at: string; checked_out_at: string | null } | null;
+  lastAttendance: { id: string; staff_id: string; checked_in_at: string; checked_out_at: string | null } | null;
 };
 
 type ShiftCardProps = { staffMembers: StaffShiftMember[] };
@@ -39,6 +40,14 @@ export default function ShiftCard({ staffMembers }: ShiftCardProps) {
   }
 
   const onDutyCount = staffMembers.filter((member) => Boolean(member.shift)).length;
+  function formatAttendanceTime(value: string | null | undefined) {
+    if (!value) return "—";
+    return new Date(value).toLocaleString("en-ZA", {
+      timeZone: "Africa/Johannesburg",
+      day: "2-digit", month: "short", year: "numeric",
+      hour: "2-digit", minute: "2-digit", hour12: false,
+    });
+  }
 
   return (
     <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
@@ -57,8 +66,12 @@ export default function ShiftCard({ staffMembers }: ShiftCardProps) {
                 <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${isOnDuty ? "bg-blue-800 text-white" : "bg-slate-100 text-slate-500"}`}><UserRound className="h-5 w-5" /></div>
                 <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-slate-950">{member.full_name}</p><p className="mt-1 truncate text-xs text-slate-500">{member.phone || "No phone recorded"}</p><div className="mt-2 flex flex-wrap items-center gap-2"><span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${isOnDuty ? "bg-blue-100 text-blue-800" : member.is_active ? "bg-slate-100 text-slate-600" : "bg-red-100 text-red-700"}`}>{isOnDuty ? "On duty" : member.is_active ? "Off duty" : "Inactive"}</span>{!member.is_active && <span className="text-[10px] text-red-600">Cannot clock in</span>}</div></div>
               </div>
-              {isOnDuty && member.shift && <p className="mt-4 flex items-center gap-2 text-[11px] leading-5 text-blue-900"><Clock3 className="h-3.5 w-3.5 shrink-0" /> Started {new Date(member.shift.checked_in_at).toLocaleTimeString("en-ZA", { timeZone: "Africa/Johannesburg", hour: "2-digit", minute: "2-digit" })}</p>}
-              {!isOnDuty && <p className="mt-4 text-[11px] leading-5 text-slate-500">This team member has no open shift.</p>}
+              <div className="mt-4 grid grid-cols-1 gap-2 rounded-xl bg-slate-50 p-3 text-[11px] leading-5 sm:grid-cols-2">
+                <div><p className="font-semibold text-slate-500">Last check-in</p><p className="font-medium text-slate-900">{formatAttendanceTime(member.lastAttendance?.checked_in_at)}</p></div>
+                <div><p className="font-semibold text-slate-500">Last check-out</p><p className="font-medium text-slate-900">{member.lastAttendance?.checked_out_at ? formatAttendanceTime(member.lastAttendance.checked_out_at) : member.lastAttendance ? "Not checked out yet" : "No attendance recorded"}</p></div>
+              </div>
+              {isOnDuty && member.shift && <p className="mt-2 flex items-center gap-2 text-[11px] leading-5 text-blue-900"><Clock3 className="h-3.5 w-3.5 shrink-0" /> Currently on shift since {formatAttendanceTime(member.shift.checked_in_at)}</p>}
+              {!isOnDuty && !member.lastAttendance && <p className="mt-2 text-[11px] leading-5 text-slate-500">This team member has no attendance history.</p>}
               {flash && <p role="status" className={`mt-3 rounded-lg px-3 py-2 text-[11px] leading-5 ${flash.success ? "bg-blue-100 text-blue-900" : "bg-red-50 text-red-700"}`}>{flash.message}</p>}
               {isOnDuty ? (
                 <button type="button" onClick={() => void changeShift(member.id, "clock_out")} disabled={isPending} className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700 disabled:opacity-60">{isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}Clock out</button>

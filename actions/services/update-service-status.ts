@@ -7,8 +7,8 @@ import { requireOwnerOrAdmin } from "@/lib/auth/get-current-user";
 import { authorizeStaffWrite, clearStaffWriteAuthorization, logStaffServiceOperation } from "@/lib/staff/security";
 
 import {
-  sendReadyForCollectionSms,
-} from "@/lib/notifications/service-sms";
+  sendReadyForCollectionWhatsApp,
+} from "@/lib/notifications/whatsapp";
 
 type ServiceStatus =
   | "pending"
@@ -139,7 +139,7 @@ export async function updateServiceStatus(
 
   /*
    * ----------------------------------------------------------
-   * READY FOR COLLECTION SMS
+   * READY FOR COLLECTION WHATSAPP
    * ----------------------------------------------------------
    */
 
@@ -215,8 +215,8 @@ export async function updateServiceStatus(
       client?.phone &&
       client?.full_name
     ) {
-      const smsResult =
-        await sendReadyForCollectionSms({
+      const whatsappResult =
+        await sendReadyForCollectionWhatsApp({
           customerName:
             client.full_name,
 
@@ -254,21 +254,21 @@ export async function updateServiceStatus(
         });
 
       if (
-        !smsResult.success
+        !whatsappResult.success
       ) {
         console.warn(
-          "READY FOR COLLECTION SMS WAS NOT SENT:",
-          smsResult.error,
+          "READY FOR COLLECTION WHATSAPP MESSAGE WAS NOT SENT:",
+          whatsappResult.error,
         );
       } else {
         console.info(
-          "READY FOR COLLECTION SMS SENT:",
-          smsResult.sid,
+          "READY FOR COLLECTION WHATSAPP MESSAGE ACCEPTED:",
+          whatsappResult.sid,
         );
       }
     } else {
       console.warn(
-        "READY SMS SKIPPED: customer phone number unavailable.",
+        "READY WHATSAPP MESSAGE SKIPPED: customer phone number unavailable.",
       );
     }
   }

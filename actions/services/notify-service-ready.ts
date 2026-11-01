@@ -5,8 +5,8 @@ import { requireOwnerOrAdmin } from "@/lib/auth/get-current-user";
 import { authorizeStaffWrite, clearStaffWriteAuthorization, logStaffServiceOperation } from "@/lib/staff/security";
 
 import {
-  sendReadyForCollectionSms,
-} from "@/lib/notifications/service-sms";
+  sendReadyForCollectionWhatsApp,
+} from "@/lib/notifications/whatsapp";
 
 export type NotifyServiceReadyResult = {
   success: boolean;
@@ -58,7 +58,7 @@ export async function notifyServiceReady(
 
     if (error || !service) {
       console.error(
-        "READY SMS SERVICE LOAD FAILED:",
+        "READY WHATSAPP SERVICE LOAD FAILED:",
         error,
       );
 
@@ -124,11 +124,11 @@ export async function notifyServiceReady(
       );
 
     // --------------------------------------------------
-    // SEND SMS
+    // SEND WHATSAPP MESSAGE
     // --------------------------------------------------
 
     const result =
-      await sendReadyForCollectionSms({
+      await sendReadyForCollectionWhatsApp({
         customerName:
           client.full_name,
 
@@ -170,7 +170,7 @@ export async function notifyServiceReady(
         success: false,
         message:
           result.error ??
-          "Unable to send SMS.",
+          "Unable to send WhatsApp message.",
       };
     }
 
