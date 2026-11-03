@@ -52,6 +52,7 @@ type ServiceType = {
 
 type NewServiceFormProps = {
   serviceTypes: ServiceType[];
+  initialClient?: { id: string; full_name: string; phone: string; email: string | null } | null;
 };
 
 
@@ -68,9 +69,14 @@ const inputClassName =
 const labelClassName =
   "mb-2 block text-sm font-medium text-neutral-700";
 
+function pamphletPriceFor(type: ServiceType | undefined): string {
+  const match = type?.description?.match(/Pamphlet price:\s*R([0-9,]+(?:\.[0-9]{1,2})?)/i);
+  return match ? match[1].replace(/,/g, "") : "";
+}
+
 
 export default function NewServiceForm({
-  serviceTypes,
+  serviceTypes, initialClient = null,
 }: NewServiceFormProps) {
   const router = useRouter();
   const serviceFormRef = useRef<HTMLFormElement>(null);
@@ -116,20 +122,11 @@ export default function NewServiceForm({
    * ----------------------------------------------------------
    */
 
-  const [clientId, setClientId] =
-    useState("");
-
-  const [clientName, setClientName] =
-    useState("");
-
-  const [phone, setPhone] =
-    useState("");
-
-  const [email, setEmail] =
-    useState("");
-
-  const [clientSearch, setClientSearch] =
-    useState("");
+  const [clientId, setClientId] = useState(initialClient?.id ?? "");
+  const [clientName, setClientName] = useState(initialClient?.full_name ?? "");
+  const [phone, setPhone] = useState(initialClient?.phone ?? "");
+  const [email, setEmail] = useState(initialClient?.email ?? "");
+  const [clientSearch, setClientSearch] = useState(initialClient?.full_name ?? "");
 
   const [clientResults, setClientResults] =
     useState<ClientSearchResult[]>([]);
@@ -156,13 +153,13 @@ export default function NewServiceForm({
    * ----------------------------------------------------------
    */
 
-  const [serviceTypeId, setServiceTypeId] =
-    useState(
-      serviceTypes[0]?.id ?? "",
-    );
-
-  const [totalPrice, setTotalPrice] =
-    useState("");
+  type ServiceLine = { serviceTypeId: string; quantity: string; unitPrice: string; pricePending: boolean };
+  const [lineItems, setLineItems] = useState<ServiceLine[]>([
+    { serviceTypeId: serviceTypes[0]?.id ?? "", quantity: "1", unitPrice: pamphletPriceFor(serviceTypes[0]), pricePending: false },
+  ]);
+  const serviceTypeId = lineItems[0]?.serviceTypeId ?? "";
+  const hasPendingPrice = lineItems.some((item) => item.pricePending);
+  const basePrice = lineItems.reduce((sum, item) => sum + (item.pricePending ? 0 : (Number(item.unitPrice) || 0) * Math.max(1, Number(item.quantity) || 1)), 0);
 
   const [isExpress, setIsExpress] = useState(false);
 
@@ -216,7 +213,6 @@ export default function NewServiceForm({
    * ----------------------------------------------------------
    */
 
-  const basePrice = Number(totalPrice) || 0;
   const price = isExpress ? basePrice * 2 : basePrice;
 
   const depositAmount =
@@ -931,141 +927,48 @@ export default function NewServiceForm({
         </div>
 
 
-        <div className="grid gap-5 p-5 sm:grid-cols-2 sm:p-7">
-          <div className="sm:col-span-2">
-            <label
-              htmlFor="serviceTypeId"
-              className={labelClassName}
-            >
-              Service type
-            </label>
-
-            <div className="relative">
-              <select
-                id="serviceTypeId"
-                name="serviceTypeId"
-                value={serviceTypeId}
-                onChange={(event) =>
-                  setServiceTypeId(
-                    event.target.value,
-                  )
-                }
-                className={`${inputClassName} appearance-none pr-11`}
-                required
-              >
-                <option value="">
-                  Select service
-                </option>
-
-                {serviceTypes.map(
-                  (serviceType) => (
-                    <option
-                      key={serviceType.id}
-                      value={serviceType.id}
-                    >
-                      {serviceType.name}
-                    </option>
-                  ),
-                )}
-              </select>
-
-              <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
-            </div>
+        <div className="space-y-4 p-5 sm:p-7">
+          <input type="hidden" name="serviceTypeId" value={serviceTypeId} />
+          <input type="hidden" name="serviceItems" value={JSON.stringify(lineItems)} />
+          <input type="hidden" name="basePrice" value={basePrice.toFixed(2)} />
+          <input type="hidden" name="totalPrice" value={price.toFixed(2)} />
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div><h3 className="text-sm font-semibold text-neutral-900">Service items</h3><p className="text-xs text-neutral-500">Add every load or item to this one service and invoice.</p></div>
+            <button type="button" onClick={() => setLineItems((items) => [...items, { serviceTypeId: serviceTypes[0]?.id ?? "", quantity: "1", unitPrice: pamphletPriceFor(serviceTypes[0]), pricePending: false }])} className="h-10 rounded-xl border border-blue-200 bg-blue-50 px-4 text-xs font-semibold text-blue-800 hover:bg-blue-100">+ Add another service</button>
           </div>
-
-
-          <div>
-            <label
-              htmlFor="totalPrice"
-              className={labelClassName}
-            >
-              Agreed base price
-            </label>
-
-            <div className="relative">
-              <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-neutral-500">
-                R
-              </span>
-
-              <input
-                id="totalPrice"
-                name="basePrice"
-                type="number"
-                min="0"
-                step="0.01"
-                inputMode="decimal"
-                value={totalPrice}
-                onChange={(event) =>
-                  setTotalPrice(
-                    event.target.value,
-                  )
-                }
-                placeholder="0.00"
-                className={`${inputClassName} pl-9 text-base font-semibold`}
-                required
-              />
+          {lineItems.map((item, index) => (
+            <div key={index} className="grid gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 p-4 sm:grid-cols-12 sm:items-end">
+              <div className="sm:col-span-5">
+                <label className={labelClassName}>Service type {index + 1}</label>
+                <select value={item.serviceTypeId} onChange={(e) => setLineItems((items) => items.map((row, i) => i === index ? { ...row, serviceTypeId: e.target.value, unitPrice: pamphletPriceFor(serviceTypes.find((type) => type.id === e.target.value)) } : row))} className={inputClassName} required>
+                  <option value="">Select service</option>
+                  {serviceTypes.map((type) => <option key={type.id} value={type.id}>{type.name}{type.description?.includes("Pamphlet price:") ? ` — ${type.description.split(".")[0].replace("Pamphlet price: ", "")}` : ""}</option>)}
+                </select>
+              </div>
+              <div className="sm:col-span-2">
+                <label className={labelClassName}>Qty / loads</label>
+                <input type="number" min="1" step="1" value={item.quantity} onChange={(e) => setLineItems((items) => items.map((row, i) => i === index ? { ...row, quantity: e.target.value } : row))} className={inputClassName} required />
+              </div>
+              <div className="sm:col-span-3">
+                <label className={labelClassName}>Price per item (R)</label>
+                <input type="number" min="0" step="0.01" inputMode="decimal" value={item.unitPrice} disabled={item.pricePending} onChange={(e) => setLineItems((items) => items.map((row, i) => i === index ? { ...row, unitPrice: e.target.value } : row))} placeholder="0.00" className={inputClassName} />
+              </div>
+              <div className="flex items-center justify-between gap-2 sm:col-span-2">
+                <label className="flex items-center gap-2 text-xs text-neutral-700"><input type="checkbox" checked={item.pricePending} onChange={(e) => setLineItems((items) => items.map((row, i) => i === index ? { ...row, pricePending: e.target.checked, unitPrice: e.target.checked ? "" : row.unitPrice } : row))} /> Price pending</label>
+                {lineItems.length > 1 && <button type="button" onClick={() => setLineItems((items) => items.filter((_, i) => i !== index))} className="text-xs font-medium text-red-600">Remove</button>}
+              </div>
+              <p className="sm:col-span-12 text-xs text-neutral-500">{item.pricePending ? "Price will be agreed and entered later." : `Line total: R ${((Number(item.unitPrice) || 0) * Math.max(1, Number(item.quantity) || 1)).toFixed(2)}`}</p>
             </div>
-
-            <p className="mt-2 text-xs text-neutral-400">
-              Enter the negotiated standard price. Express service doubles this amount.
-            </p>
-          </div>
-
-          <div className="sm:col-span-2 rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
+          ))}
+          <div className="rounded-2xl border border-neutral-200 bg-white p-4">
             <label className="flex cursor-pointer items-start gap-3">
-              <input
-                type="checkbox"
-                name="isExpress"
-                checked={isExpress}
-                onChange={(event) => setIsExpress(event.target.checked)}
-                className="mt-1 h-4 w-4 rounded border-neutral-300 accent-neutral-950"
-              />
-              <span className="min-w-0 flex-1">
-                <span className="flex flex-wrap items-center gap-2 text-sm font-semibold text-neutral-950">
-                  Express service <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">2–4 hours</span>
-                </span>
-                <span className="mt-1 block text-xs leading-5 text-neutral-500">Express service costs twice the agreed base price. The expected completion window is recorded automatically.</span>
-                <span className="mt-2 block text-sm font-semibold text-neutral-950">
-                  {isExpress ? "Express total" : "Service total"}: R {price.toFixed(2)}
-                </span>
-              </span>
+              <input type="checkbox" name="isExpress" checked={isExpress} onChange={(event) => setIsExpress(event.target.checked)} className="mt-1 h-4 w-4 rounded border-neutral-300 accent-neutral-950" />
+              <span className="min-w-0 flex-1"><span className="font-semibold text-neutral-950">Express service – double price</span><span className="mt-1 block text-xs text-neutral-500">Pamphlet turnaround: collect within 3–4 hours.</span></span>
             </label>
-            <input type="hidden" name="totalPrice" value={price.toFixed(2)} />
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-neutral-100 pt-3 text-sm"><span className="font-medium text-neutral-600">Combined service total</span><strong className="text-lg text-neutral-950">R {price.toFixed(2)} {hasPendingPrice ? "+ price pending" : ""}</strong></div>
           </div>
-
-
-          <div>
-            <label
-              htmlFor="numberOfItems"
-              className={labelClassName}
-            >
-              Number of items
-              <span className="ml-2 text-xs font-normal text-neutral-400">
-                optional
-              </span>
-            </label>
-
-            <div className="relative">
-              <Package className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
-
-              <input
-                id="numberOfItems"
-                name="numberOfItems"
-                type="number"
-                min="1"
-                step="1"
-                inputMode="numeric"
-                value={numberOfItems}
-                onChange={(event) =>
-                  setNumberOfItems(
-                    event.target.value,
-                  )
-                }
-                placeholder="e.g. 12"
-                className={`${inputClassName} pl-11`}
-              />
-            </div>
-          </div>
+          {hasPendingPrice && <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">At least one item still needs a quote. Deposits are disabled until all item prices are agreed.</p>}
+          <div><label htmlFor="numberOfItems" className={labelClassName}>Number of items <span className="text-xs font-normal text-neutral-400">optional</span></label><input id="numberOfItems" name="numberOfItems" type="number" min="1" step="1" inputMode="numeric" value={numberOfItems} onChange={(event) => setNumberOfItems(event.target.value)} placeholder="e.g. 12" className={inputClassName} /></div>
         </div>
       </section>
 
@@ -1094,7 +997,7 @@ export default function NewServiceForm({
         </div>
 
 
-        <div className="grid gap-5 p-5 sm:grid-cols-2 lg:grid-cols-4 sm:p-7">
+        <div className="grid grid-cols-1 gap-5 p-5 sm:grid-cols-2 sm:p-7">
           <div>
             <label
               htmlFor="serviceDate"
@@ -1407,6 +1310,7 @@ export default function NewServiceForm({
                         step="0.01"
                         inputMode="decimal"
                         value={deposit}
+                        disabled={hasPendingPrice}
                         onChange={(event) =>
                           setDeposit(
                             event.target.value,
@@ -1518,7 +1422,7 @@ export default function NewServiceForm({
             <input
             type="hidden"
             name="deposit"
-            value={deposit || "0"}
+            value={hasPendingPrice ? "0" : (deposit || "0")}
             />
 
             <input
@@ -1643,7 +1547,7 @@ export default function NewServiceForm({
                 !clientName ||
                 !phone ||
                 !serviceTypeId ||
-                !totalPrice
+                lineItems.some((item) => !item.serviceTypeId || (!item.pricePending && !item.unitPrice))
               }
               className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-blue-800 px-6 text-sm font-semibold text-white transition hover:bg-blue-900 disabled:cursor-not-allowed disabled:opacity-50"
             >

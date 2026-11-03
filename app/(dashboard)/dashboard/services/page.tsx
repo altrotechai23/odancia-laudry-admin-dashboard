@@ -712,7 +712,7 @@ function ServiceRow({ service, asOf }: { service: LaundryService; asOf: number }
       </td>
       <td className="px-5 py-4 align-top">
         <ServiceCellLink href={href}>
-          <p className="text-sm font-semibold text-neutral-950">{formatCurrency(service.price)}</p>
+          <p className="text-sm font-semibold text-neutral-950">{service.price_pending ? "Price pending" : formatCurrency(service.price)}</p>
           {service.deposit > 0 && <p className="mt-1 text-[11px] text-neutral-400">Deposit {formatCurrency(service.deposit)}</p>}
         </ServiceCellLink>
       </td>
@@ -778,7 +778,7 @@ function ServiceCard({ service, asOf }: { service: LaundryService; asOf: number 
         <UrgencyFlag service={service} asOf={asOf} />
       </div>
       <div className="mt-4 grid grid-cols-2 gap-2.5">
-        <MobileDetail label="Total" value={formatCurrency(service.price)} />
+        <MobileDetail label="Total" value={service.price_pending ? "Price pending" : formatCurrency(service.price)} />
         <MobileDetail label="Balance" value={formatCurrency(service.balance)} highlight={service.balance > 0} />
         <div className="rounded-xl border border-red-100 bg-red-50/70 p-3.5"><p className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-red-700">Collection date</p><p className="mt-1.5 text-sm font-extrabold text-blue-950">{service.collection_date ? formatDate(service.collection_date) : "Date not set"}</p><p className="mt-1 text-xs font-bold text-red-700">{service.collection_time ? formatTime(service.collection_time) : "Collection time not recorded"}</p></div>
         <MobileDetail label="Received by" value={service.staff_name ?? "Not recorded"} />

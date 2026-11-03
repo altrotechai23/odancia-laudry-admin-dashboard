@@ -7,6 +7,7 @@ export async function getServiceTypes() {
     .from("service_types")
     .select("*")
     .eq("is_active", true)
+    .order("display_order", { ascending: true, nullsFirst: false })
     .order("name");
 
   if (error) throw error;

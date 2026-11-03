@@ -14,6 +14,7 @@ import {
 import ServiceActions from "./ServiceActions";
 import ServicePayment from "./ServicePayment";
 import CollectionScheduleEditor from "./CollectionScheduleEditor";
+import ConfirmPendingPrices from "./ConfirmPendingPrices";
 import {
   requireUser,
 } from "@/lib/auth/get-current-user";
@@ -270,9 +271,14 @@ export default async function ServiceDetailsPage({
                   }
                 />
 
+                {service.price_pending && <div className="border-b border-black/[0.05] p-5 sm:col-span-2"><ConfirmPendingPrices serviceId={service.id} items={service.service_items.filter((item) => item.price_pending)} /></div>}
+                <div className="border-b border-black/[0.05] p-5 sm:col-span-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-neutral-400">Items on this service</p>
+                  {service.service_items.length > 0 ? <div className="mt-3 divide-y divide-neutral-100">{service.service_items.map((item) => <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm"><span className="font-medium text-neutral-800">{item.service_name} × {item.quantity}</span><span className={item.price_pending ? "font-semibold text-amber-700" : "font-semibold text-neutral-900"}>{item.price_pending ? "Price pending" : formatCurrency(item.line_total ?? 0)}</span></div>)}</div> : <p className="mt-2 text-sm text-neutral-500">{service.service_type_name ?? "Laundry service"} (legacy service record)</p>}
+                </div>
                 <DetailBlock
                   label="Agreed base price"
-                  value={formatCurrency(service.base_price)}
+                  value={service.price_pending ? "Price pending" : formatCurrency(service.base_price)}
                 />
 
                 {service.is_express && (
@@ -437,6 +443,7 @@ export default async function ServiceDetailsPage({
       }
       serviceTypeName={service.service_type_name}
       paymentHistory={service.payment_history}
+      pricePending={service.price_pending}
     />
   </div>
 </section>

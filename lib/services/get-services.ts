@@ -57,6 +57,8 @@ export type LaundryService = {
 
   service_type_id: string | null;
   service_type_name: string | null;
+  price_pending: boolean;
+  service_items: { id: string; service_name: string; quantity: number; unit_price: number | null; line_total: number | null; price_pending: boolean }[];
 
   notes: string | null;
 
@@ -136,6 +138,7 @@ type ServiceRow = {
   balance: number | string | null;
 
   payment_status: string | null;
+  price_pending: boolean | null;
   service_status: string | null;
 
   fulfillment_method: string | null;
@@ -158,6 +161,7 @@ type ServiceRow = {
     | ServiceTypeRelation
     | ServiceTypeRelation[]
     | null;
+  service_items?: { id: string; service_name: string; quantity: number; unit_price: number | string | null; line_total: number | string | null; price_pending: boolean }[];
 
   created_by_profile:
     | ProfileRelation
@@ -265,7 +269,10 @@ function mapService(
     paymentHistory.length > 0 ? ledgerAmountPaid : storedAmountPaid,
   );
   const effectiveBalance = Math.max(0, Math.round((serviceTotal - effectiveAmountPaid) * 100) / 100);
-  const effectivePaymentStatus: PaymentStatus = effectiveBalance <= 0
+  const pricePending = Boolean(service.price_pending);
+  const effectivePaymentStatus: PaymentStatus = pricePending
+    ? "unpaid"
+    : effectiveBalance <= 0
     ? "paid"
     : effectiveAmountPaid > 0
       ? "partial"
@@ -542,6 +549,7 @@ const SERVICE_SELECT = `
   amount_paid,
   balance,
   payment_status,
+  price_pending,
   service_status,
   fulfillment_method,
   number_of_items,
@@ -561,6 +569,14 @@ const SERVICE_SELECT = `
   service_types (
     id,
     name
+  ),
+  service_items (
+    id,
+    service_name,
+    quantity,
+    unit_price,
+    line_total,
+    price_pending
   ),
 
   created_by_profile:profiles!services_created_by_fkey (

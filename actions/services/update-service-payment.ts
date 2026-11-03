@@ -72,12 +72,16 @@ export async function updateServicePayment(
       return { ...initialState, message: "Enter a valid payment total." };
     }
 
+    const supabase = await createClient();
+    const { data: servicePriceState, error: servicePriceStateError } = await supabase.from("services").select("price_pending").eq("id", serviceId).maybeSingle();
+    if (servicePriceStateError || !servicePriceState) return { ...initialState, message: "Unable to verify this service's pricing." };
+    if (servicePriceState.price_pending) return { ...initialState, message: "Payment is disabled until every service item has an agreed price." };
+
     const staffAuthorization = await authorizeStaffWrite(passcode);
     if (!staffAuthorization.success) {
       return { ...initialState, message: staffAuthorization.message ?? "Staff passcode verification failed." };
     }
 
-    const supabase = await createClient();
     const paymentResult = await (async () => {
       try {
         const rpcResult = await supabase.rpc("odancia_record_service_payments", {

@@ -21,6 +21,25 @@ export async function createService(
   await requireOwnerOrAdmin();
   const supabase = await createClient();
 
+  let serviceItems: Array<{ serviceTypeId: string; quantity: number; unitPrice: number | null; pricePending: boolean }> = [];
+  try {
+    const rawItems = JSON.parse(String(formData.get("serviceItems") ?? "[]"));
+    if (!Array.isArray(rawItems) || rawItems.length < 1 || rawItems.length > 30) throw new Error("Add at least one service item (maximum 30).");
+    serviceItems = rawItems.map((item: any) => {
+      const serviceTypeId = String(item.serviceTypeId ?? "");
+      const quantity = Number(item.quantity);
+      const pricePending = item.pricePending === true;
+      const unitPrice = pricePending ? null : Number(item.unitPrice);
+      if (!serviceTypeId || !Number.isInteger(quantity) || quantity < 1 || (!pricePending && (!Number.isFinite(unitPrice) || (unitPrice as number) < 0))) throw new Error("Check each service type, quantity and price.");
+      return { serviceTypeId, quantity, unitPrice, pricePending };
+    });
+  } catch (error) {
+    return { success: false, message: error instanceof Error ? error.message : "Invalid service items." };
+  }
+  const hasPendingPrice = serviceItems.some((item) => item.pricePending);
+  const itemBaseTotal = serviceItems.reduce((sum, item) => sum + (item.pricePending ? 0 : (item.unitPrice ?? 0) * item.quantity), 0);
+  const computedTotal = itemBaseTotal * (formData.get("isExpress") === "on" ? 2 : 1);
+
   const parsed = createServiceSchema.safeParse({
     clientId:
       formData.get("clientId")?.toString() || undefined,
@@ -28,9 +47,9 @@ export async function createService(
     clientName: formData.get("clientName"),
     phone: formData.get("phone"),
     email: formData.get("email"),
-    serviceTypeId: formData.get("serviceTypeId"),
-    basePrice: formData.get("basePrice"),
-    totalPrice: formData.get("totalPrice"),
+    serviceTypeId: serviceItems[0]?.serviceTypeId,
+    basePrice: itemBaseTotal,
+    totalPrice: computedTotal,
     isExpress: formData.get("isExpress") === "on",
     deposit: formData.get("deposit"),
     paymentMethod: formData.get("paymentMethod"),
@@ -58,6 +77,9 @@ export async function createService(
   }
 
   try {
+    if (hasPendingPrice && data.deposit > 0) {
+      return { success: false, message: "A deposit cannot be recorded until every service item has an agreed price." };
+    }
     if (data.deposit > data.totalPrice) {
       return { success: false, message: "The deposit cannot exceed the final service price." };
     }
@@ -153,7 +175,8 @@ export async function createService(
         deposit_amount: 0,
         amount_paid: 0,
         balance: data.totalPrice,
-        payment_status: data.totalPrice <= 0 ? "paid" : "unpaid",
+        payment_status: data.totalPrice <= 0 && !hasPendingPrice ? "paid" : "unpaid",
+        price_pending: hasPendingPrice,
         is_express: data.isExpress,
         express_earliest_at: data.isExpress
           ? new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString()
@@ -194,6 +217,31 @@ export async function createService(
       };
     }
 
+    const { data: itemTypes, error: itemTypesError } = await supabase
+      .from("service_types")
+      .select("id, name")
+      .in("id", serviceItems.map((item) => item.serviceTypeId));
+    if (itemTypesError) {
+      await supabase.from("services").delete().eq("id", service.id);
+      console.error("SERVICE ITEM TYPE LOOKUP FAILED:", itemTypesError);
+      return { success: false, message: "Unable to verify the selected service types." };
+    }
+    const typeNames = new Map<string, string>((itemTypes ?? []).map((type: { id: string; name: string }) => [type.id, type.name] as [string, string]));
+    const { error: itemsInsertError } = await supabase.from("service_items").insert(serviceItems.map((item) => ({
+      service_id: service.id,
+      service_type_id: item.serviceTypeId,
+      service_name: typeNames.get(item.serviceTypeId) ?? "Laundry service",
+      quantity: item.quantity,
+      unit_price: item.unitPrice,
+      line_total: item.pricePending ? null : (item.unitPrice ?? 0) * item.quantity * (data.isExpress ? 2 : 1),
+      price_pending: item.pricePending,
+    })));
+    if (itemsInsertError) {
+      await supabase.from("services").delete().eq("id", service.id);
+      console.error("SERVICE ITEMS CREATE FAILED:", itemsInsertError);
+      return { success: false, message: "Unable to save the service items. No service was kept; please try again." };
+    }
+
     await logStaffServiceOperation({
       staffId: staffAuthorization.staffId,
       staffName: staffAuthorization.staffName,
@@ -206,6 +254,8 @@ export async function createService(
         total_price: data.totalPrice,
         base_price: data.basePrice,
         is_express: data.isExpress,
+        price_pending: hasPendingPrice,
+        service_items: serviceItems,
       },
     });
 
@@ -295,9 +345,7 @@ export async function createService(
 
           phone: data.phone,
 
-          serviceName:
-            serviceType?.name ??
-            "Laundry Service",
+          serviceName: serviceItems.map((item) => `${typeNames.get(item.serviceTypeId) ?? "Laundry service"} × ${item.quantity}${item.pricePending ? " (price pending)" : ""}`).join(", ") || serviceType?.name || "Laundry Service",
 
           serviceDescription:
             serviceType?.description ??

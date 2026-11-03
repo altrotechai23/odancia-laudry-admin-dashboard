@@ -49,6 +49,7 @@ type ServiceRecord = {
   service_time: string | null;
   collection_date: string | null;
   total_price: number | null;
+  price_pending: boolean | null;
   deposit_amount: number | null;
   amount_paid: number | null;
   balance: number | null;
@@ -400,6 +401,7 @@ async function getClientDetails(
         service_time,
         collection_date,
         total_price,
+        price_pending,
         deposit_amount,
         amount_paid,
         balance,
@@ -482,6 +484,7 @@ async function getClientDetails(
 
       total_price:
         service.total_price,
+      price_pending: service.price_pending,
 
       deposit_amount:
         service.deposit_amount,
@@ -739,11 +742,7 @@ function ServiceRow({
       <td className="px-5 py-4">
 
         <p className="text-xs font-semibold text-neutral-950">
-          {formatCurrency(
-            Number(
-              service.total_price ?? 0,
-            ),
-          )}
+          {service.price_pending ? "Price pending" : formatCurrency(service.total_price ?? 0)}
         </p>
 
         <p className="mt-1 text-[10px] text-neutral-400">
@@ -861,11 +860,7 @@ function ServiceCard({
 
         <MobileDetail
           label="Price"
-          value={formatCurrency(
-            Number(
-              service.total_price ?? 0,
-            ),
-          )}
+          value={service.price_pending ? "Price pending" : formatCurrency(service.total_price ?? 0)}
         />
 
         <MobileDetail

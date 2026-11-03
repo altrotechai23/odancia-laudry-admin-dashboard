@@ -23,6 +23,7 @@ type ServicePaymentProps = {
   amountPaid: number;
   serviceTypeName: string | null;
   paymentHistory: ServicePaymentTransaction[];
+  pricePending?: boolean;
 };
 
 const initialState = { success: false, message: "" };
@@ -34,6 +35,7 @@ export default function ServicePayment({
   amountPaid,
   serviceTypeName,
   paymentHistory,
+  pricePending = false,
 }: ServicePaymentProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [staffPasscode, setStaffPasscode] = useState("");
@@ -127,7 +129,7 @@ export default function ServicePayment({
       <div className="space-y-4">
         <div className="rounded-2xl bg-neutral-50 p-4">
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-400">Total</p>
-          <p className="mt-2 text-2xl font-semibold tracking-tight text-neutral-950">{formatCurrency(safeTotal)}</p>
+          <p className="mt-2 text-2xl font-semibold tracking-tight text-neutral-950">{pricePending ? "Price pending" : formatCurrency(safeTotal)}</p>
         </div>
         <div className="space-y-3">
           <MoneyRow label="Paid" value={formatCurrency(safeAmountPaid)} />
@@ -169,7 +171,9 @@ export default function ServicePayment({
 
         {state.success && state.message && <div role="status" className="rounded-xl bg-emerald-50 px-3 py-2 text-xs text-emerald-700">{state.message}</div>}
         <PaymentBadge status={status} />
-        {outstanding > 0 ? (
+        {pricePending ? (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-xs leading-5 text-amber-800">Payment is unavailable until all service item prices have been confirmed.</div>
+        ) : outstanding > 0 ? (
           <button type="button" onClick={openEditor} className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-800 px-4 py-3 text-xs font-semibold text-white transition hover:bg-blue-900">
             <Plus className="h-4 w-4" /> Record payment
           </button>
