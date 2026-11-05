@@ -355,6 +355,18 @@ function mapService(
     service_type_name:
       serviceType?.name ?? null,
 
+    // Older service rows may not have item records yet. Keep them compatible
+    // with the multi-item model by returning an empty list in that case.
+    price_pending: pricePending,
+    service_items: (service.service_items ?? []).map((item) => ({
+      id: item.id,
+      service_name: item.service_name,
+      quantity: Number(item.quantity ?? 1),
+      unit_price: item.unit_price == null ? null : Number(item.unit_price),
+      line_total: item.line_total == null ? null : Number(item.line_total),
+      price_pending: Boolean(item.price_pending),
+    })),
+
     notes:
       service.notes ?? null,
 
