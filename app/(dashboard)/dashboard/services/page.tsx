@@ -68,7 +68,7 @@ function parseServiceStatus(
 
 function parseServiceSort(value: string | undefined): ServiceSort {
   if (value === "collection" || value === "express" || value === "newest") return value;
-  return "urgency";
+  return "newest";
 }
 
 function collectionDeadline(service: LaundryService): number | null {
@@ -223,7 +223,7 @@ export default async function ServicesPage({
      FILTERED SUMMARY
   ========================================================== */
 
-  // Default view prioritizes the nearest service deadline (express jobs use their 4-hour target).
+  // Default view shows the most recently added services first.
   services = sortServices(services, sort);
 
   const summary =

@@ -236,7 +236,7 @@ function buildPayments(record: JsonObject, totalPrice: number): { payments: Impo
       result.push({
         amount,
         payment_method: normalisePaymentMethod(valueOf(payment, ["payment_method", "method", "type"])),
-        payment_stage: stageText.includes("deposit") ? "deposit" : stageText.includes("final") ? "final" : "partial",
+        payment_stage: stageText.includes("deposit") ? "deposit" : (stageText.includes("final") || stageText.includes("full")) ? "final" : "partial",
         reference: asString(payment, ["reference", "transaction_reference", "receipt"]) || null,
         notes: asString(payment, ["notes", "description", "comment"]) || "Imported from service book",
       });
@@ -297,7 +297,13 @@ function prepareRecord(record: JsonObject, index: number): { data: PreparedServi
   const isExpress = parseBoolean(valueOf(record, ["is_express", "express", "urgent", "express_service"]));
   if (totalParsed === null && baseParsed === null) return { data: null, error: "A valid total_price or base_price is required.", label, sourceKey };
   const totalPrice = totalParsed ?? (baseParsed ?? 0) * (isExpress ? 2 : 1);
-  const basePrice = baseParsed ?? (isExpress ? totalPrice / 2 : totalPrice);
+  // Some historic book exports record the final charged amount in BOTH
+  // total_price and base_price for express jobs. Preserve the recorded total
+  // and infer its undiscounted base as half only in that exact case.
+  const basePrice = isExpress && totalParsed !== null && baseParsed !== null
+    && Math.round(totalParsed * 100) === Math.round(baseParsed * 100)
+    ? Math.round((totalPrice / 2) * 100) / 100
+    : (baseParsed ?? (isExpress ? totalPrice / 2 : totalPrice));
   if (isExpress && Math.round(totalPrice * 100) !== Math.round(basePrice * 200)) {
     return { data: null, error: "Express price must be double base_price. Include both values or correct the source record.", label, sourceKey };
   }
@@ -363,6 +369,10 @@ function normalisePhone(value: string) {
 
 function normaliseName(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function clientMatchKey(name: string, phone: string) {
+  return `${normaliseName(name)}|${normalisePhone(phone)}`;
 }
 
 function expressTimestamps(serviceDate: string, serviceTime: string | null) {
@@ -455,22 +465,28 @@ export async function importBookServices(rawJson: string, submittedAdminCode: st
 
   const uniquePhones = Array.from(new Set(prepared.map((row) => row.phone).filter(Boolean)));
   const namesWithoutPhone = Array.from(new Set(prepared.filter((row) => !row.phone).map((row) => row.clientName)));
-  const clientByPhone = new Map<string, string>();
-  const clientByName = new Map<string, string>();
+  // A phone number by itself is not a safe customer identifier: old paper books
+  // often use the same placeholder number for many unrelated customers. Reuse a
+  // client only when BOTH normalized name and normalized phone match.
+  const clientByPair = new Map<string, string>();
+  const clientByNameWithoutPhone = new Map<string, string>();
   for (const batch of chunks(uniquePhones, 100)) {
     if (batch.length === 0) continue;
     const { data, error } = await admin.from("clients").select("id,full_name,phone").in("phone", batch);
     if (error) return emptyResult(`Unable to look up existing customers: ${error.message}`);
     for (const client of data ?? []) {
-      if (client.phone) clientByPhone.set(normalisePhone(client.phone), client.id);
-      if (client.full_name) clientByName.set(normaliseName(client.full_name), client.id);
+      if (client.phone && client.full_name) {
+        clientByPair.set(clientMatchKey(client.full_name, client.phone), client.id);
+      }
     }
   }
   for (const batch of chunks(namesWithoutPhone, 100)) {
     if (batch.length === 0) continue;
     const { data, error } = await admin.from("clients").select("id,full_name,phone").in("full_name", batch);
     if (error) return emptyResult(`Unable to look up customers without phone numbers: ${error.message}`);
-    for (const client of data ?? []) if (client.full_name) clientByName.set(normaliseName(client.full_name), client.id);
+    for (const client of data ?? []) {
+      if (client.full_name && !client.phone) clientByNameWithoutPhone.set(normaliseName(client.full_name), client.id);
+    }
   }
   const clientsById = new Map<string, { id: string; full_name: string; phone: string | null }>();
   const linkedClientIds = Array.from(new Set(prepared.map((row) => row.existingClientId).filter((id): id is string => Boolean(id))));
@@ -528,8 +544,8 @@ export async function importBookServices(rawJson: string, submittedAdminCode: st
       failed.push({ row: row.index + 1, service: row.serviceNumber || row.clientName, message: `The referenced client_id ${row.existingClientId} does not exist in this Supabase project.` });
       continue;
     }
-    if (!clientId && row.phone) clientId = clientByPhone.get(normalisePhone(row.phone));
-    if (!clientId && !row.phone) clientId = clientByName.get(normaliseName(row.clientName));
+    if (!clientId && row.phone) clientId = clientByPair.get(clientMatchKey(row.clientName, row.phone));
+    if (!clientId && !row.phone) clientId = clientByNameWithoutPhone.get(normaliseName(row.clientName));
     let createdClientId: string | null = null;
 
     if (!clientId) {
@@ -544,8 +560,8 @@ export async function importBookServices(rawJson: string, submittedAdminCode: st
       }
       clientId = client.id;
       createdClientId = client.id;
-      if (client.phone) clientByPhone.set(normalisePhone(client.phone), client.id);
-      clientByName.set(normaliseName(client.full_name), client.id);
+      if (client.phone) clientByPair.set(clientMatchKey(client.full_name, client.phone), client.id);
+      else clientByNameWithoutPhone.set(normaliseName(client.full_name), client.id);
     }
 
     const resolvedClientId = typeof clientId === "string" && clientId.length > 0 ? clientId : null;
@@ -659,8 +675,8 @@ export async function importBookServices(rawJson: string, submittedAdminCode: st
         import_source_key: row.sourceKey,
       },
     });
-    if (row.phone) clientByPhone.set(normalisePhone(row.phone), resolvedClientId);
-    clientByName.set(normaliseName(row.clientName), resolvedClientId);
+    if (row.phone) clientByPair.set(clientMatchKey(row.clientName, row.phone), resolvedClientId);
+    else clientByNameWithoutPhone.set(normaliseName(row.clientName), resolvedClientId);
     existingKeys.add(row.sourceKey);
     existingByKey.set(row.sourceKey, { id: service.id, collection_date: row.collectionDate ?? null, collection_time: row.collectionTime ?? null });
     imported += 1;

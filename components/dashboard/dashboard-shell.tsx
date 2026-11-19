@@ -32,7 +32,7 @@ export default function DashboardShell({
           type="button"
           aria-label="Close navigation"
           onClick={() => setMobileOpen(false)}
-          className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm xl:hidden"
         />
       )}
 
@@ -42,7 +42,7 @@ export default function DashboardShell({
           collapsed ? "w-[76px]" : "w-[260px]",
           mobileOpen
             ? "translate-x-0"
-            : "-translate-x-full lg:translate-x-0",
+            : "-translate-x-full xl:translate-x-0",
         ].join(" ")}
       >
         <div className="flex h-20 items-center border-b border-black/[0.06] px-4">
@@ -153,15 +153,15 @@ export default function DashboardShell({
       <div
         className={[
           "min-h-screen transition-[padding] duration-300",
-          collapsed ? "lg:pl-[76px]" : "lg:pl-[260px]",
+          collapsed ? "xl:pl-[76px]" : "xl:pl-[260px]",
         ].join(" ")}
       >
-        <header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b border-slate-200/80 bg-[#f4f8fc]/85 px-4 backdrop-blur-xl sm:px-6 lg:px-8">
+        <header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b border-slate-200/80 bg-[#f4f8fc]/85 px-4 backdrop-blur-xl sm:px-6 xl:px-8">
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => setMobileOpen(true)}
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-black/[0.06] bg-white lg:hidden"
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-black/[0.06] bg-white xl:hidden"
               aria-label="Open navigation"
             >
               <MenuIcon />
@@ -170,7 +170,7 @@ export default function DashboardShell({
             <button
               type="button"
               onClick={() => setCollapsed((value) => !value)}
-              className="hidden h-10 w-10 items-center justify-center rounded-xl border border-black/[0.06] bg-white text-neutral-500 transition hover:text-neutral-950 lg:flex"
+              className="hidden h-10 w-10 items-center justify-center rounded-xl border border-black/[0.06] bg-white text-neutral-500 transition hover:text-neutral-950 xl:flex"
               aria-label={
                 collapsed
                   ? "Expand navigation"

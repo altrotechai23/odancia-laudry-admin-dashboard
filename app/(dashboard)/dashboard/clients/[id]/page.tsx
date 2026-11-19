@@ -284,7 +284,7 @@ export default async function ClientDetailsPage({
                  DESKTOP
               ================================================= */}
 
-              <div className="hidden overflow-x-auto sm:block">
+              <div className="hidden overflow-x-auto xl:block">
 
                 <table className="w-full min-w-[900px]">
 
@@ -339,7 +339,7 @@ export default async function ClientDetailsPage({
                  MOBILE
               ================================================= */}
 
-              <div className="divide-y divide-black/[0.05] sm:hidden">
+              <div className="divide-y divide-black/[0.05] xl:hidden">
 
                 {services.map((service) => (
                   <ServiceCard
@@ -693,17 +693,19 @@ function ServiceRow({
 
       <td className="px-5 py-4">
 
-        <p className="text-xs font-semibold text-neutral-950">
-          {service.service_types?.name ??
-            "Laundry service"}
-        </p>
-
-        <p className="mt-1 font-mono text-[10px] text-neutral-400">
-          {service.service_number ??
-            `#${service.id
-              .slice(0, 8)
-              .toUpperCase()}`}
-        </p>
+        <Link
+          href={`/dashboard/services/${service.id}`}
+          className="group inline-flex flex-col rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
+          aria-label={`Open service ${service.service_number ?? service.id}`}
+        >
+          <span className="text-xs font-semibold text-neutral-950 group-hover:text-blue-800">
+            {service.service_types?.name ?? "Laundry service"}
+          </span>
+          <span className="mt-1 font-mono text-[10px] text-neutral-400 group-hover:text-blue-700">
+            {service.service_number ?? `#${service.id.slice(0, 8).toUpperCase()}`}
+          </span>
+          <span className="mt-1 text-[10px] font-medium text-blue-700">View service →</span>
+        </Link>
 
       </td>
 
@@ -821,7 +823,11 @@ function ServiceCard({
   service: ServiceRecord;
 }) {
   return (
-    <div className="p-5">
+    <Link
+      href={`/dashboard/services/${service.id}`}
+      aria-label={`Open service ${service.service_number ?? service.id}`}
+      className="block p-4 transition hover:bg-blue-50/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-600 sm:p-5"
+    >
 
       <div className="flex items-start justify-between gap-4">
 
@@ -915,7 +921,7 @@ function ServiceCard({
         </div>
       ) : null}
 
-    </div>
+    </Link>
   );
 }
 

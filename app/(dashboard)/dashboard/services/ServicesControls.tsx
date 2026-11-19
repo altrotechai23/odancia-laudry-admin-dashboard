@@ -15,7 +15,7 @@ function buildUrl(filters: Filters) {
   const params = new URLSearchParams();
   if (filters.query.trim()) params.set("q", filters.query.trim());
   if (filters.status !== "all") params.set("status", filters.status);
-  if (filters.sort !== "urgency") params.set("sort", filters.sort);
+  if (filters.sort !== "newest") params.set("sort", filters.sort);
   const query = params.toString();
   return query ? `/dashboard/services?${query}` : "/dashboard/services";
 }
@@ -39,7 +39,7 @@ export default function ServicesControls({ query, status, sort }: { query: strin
   }, [searchDraft]);
   function changeSort(value: ServiceSort) { setSortDraft(value); navigate({ query: searchDraft, status: statusDraft, sort: value }); }
   function changeStatus(value: ServiceStatusFilter) { setStatusDraft(value); navigate({ query: searchDraft, status: value, sort: sortDraft }); }
-  const hasFilters = Boolean(searchDraft.trim()) || statusDraft !== "all" || sortDraft !== "urgency";
+  const hasFilters = Boolean(searchDraft.trim()) || statusDraft !== "all" || sortDraft !== "newest";
   return <div className="border-b border-black/[0.06] p-4 sm:p-5">
     <div className="grid gap-3 lg:grid-cols-[minmax(220px,1fr)_minmax(280px,0.9fr)] lg:items-end">
       <div className="w-full min-w-0"><label htmlFor="services-search" className="sr-only">Search services</label><div className="relative">
@@ -48,7 +48,7 @@ export default function ServicesControls({ query, status, sort }: { query: strin
       </div></div>
       <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-2"><label htmlFor="services-sort" className="inline-flex h-12 items-center gap-1.5 text-xs font-semibold text-neutral-500"><ArrowUpDown className="h-4 w-4" /> Sort</label>
         <select id="services-sort" value={sortDraft} onChange={(event) => changeSort(event.target.value as ServiceSort)} className="h-12 min-w-0 w-full rounded-2xl border border-black/[0.07] bg-white px-3 text-sm font-semibold text-neutral-700 outline-none transition focus:border-blue-500">
-          <option value="urgency">Urgency (recommended)</option><option value="collection">Collection soonest</option><option value="express">Express first</option><option value="newest">Newest first</option>
+          <option value="urgency">Urgency</option><option value="collection">Collection soonest</option><option value="express">Express first</option><option value="newest">Newest first</option>
         </select>
       </div>
     </div>
@@ -60,8 +60,8 @@ export default function ServicesControls({ query, status, sort }: { query: strin
         <span className="text-[11px] text-neutral-400">Auto-updating</span>
         {searchDraft.trim() && <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-[10px] font-medium text-neutral-600">Search: {searchDraft.trim()}</span>}
         {statusDraft !== "all" && <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-[10px] font-medium text-neutral-600">Status: {statusLabel(statusDraft)}</span>}
-        <button type="button" onClick={() => { setSearchDraft(""); setSortDraft("urgency"); setStatusDraft("all"); navigate({ query: "", status: "all", sort: "urgency" }); }} className="ml-1 min-h-9 px-2 text-[11px] font-medium text-neutral-500 underline-offset-2 transition hover:text-neutral-950 hover:underline">Clear filters</button>
-      </> : <span className="text-[11px] text-neutral-400">Sorted by urgency · Changes apply automatically</span>}
+        <button type="button" onClick={() => { setSearchDraft(""); setSortDraft("newest"); setStatusDraft("all"); navigate({ query: "", status: "all", sort: "newest" }); }} className="ml-1 min-h-9 px-2 text-[11px] font-medium text-neutral-500 underline-offset-2 transition hover:text-neutral-950 hover:underline">Clear filters</button>
+      </> : <span className="text-[11px] text-neutral-400">Sorted by newest added · Changes apply automatically</span>}
     </div>
   </div>;
 }
